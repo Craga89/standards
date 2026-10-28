@@ -1,0 +1,11 @@
+{
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "extends": ["./base.json"],
+  "env": {
+    "browser": true
+  },
+  "globals": {
+    "Astro": "readonly"
+  },
+  "ignorePatterns": [".astro/**", "src/env.d.ts"]
+}
