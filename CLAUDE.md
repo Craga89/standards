@@ -16,8 +16,10 @@ them:
 Rules for changes:
 
 - A reusable workflow's `./` paths resolve to the caller's checkout, so the workflows here refer
-  to the actions here as `Craga89/standards/<action>@v1`. Ship action changes before the workflow
-  changes that rely on them.
+  to the actions here as `Craga89/standards/<action>@<sha> # v1`, pinned like any other action (a
+  workflow can't name its own commit, so it pins the commit its actions were last changed in).
+  Ship an action change first, then bump those pins in the workflows in a second PR. CI fails on
+  any `uses:` that isn't a local path or a full commit SHA.
 - A helper script an action needs lives inside that action's directory, or in `lib/` when several
   actions share it (GitHub downloads the whole repo for any action, so `$GITHUB_ACTION_PATH/../lib`
   works). Scripts get tests in `tests/`.

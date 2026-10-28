@@ -85,12 +85,12 @@ jobs:
           BRANCH: ${{ github.event_name == 'delete' && github.event.ref || github.ref_name }}
         run: echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
       - id: name
-        uses: Craga89/standards/preview-name@v1
+        uses: Craga89/standards/preview-name@2683e4116e18f128c46fce9261c4bd5d1284e8ff # v1
         with:
           branch: ${{ steps.branch.outputs.branch }}
           site-url: ${{ inputs.site-url }}
       - if: github.event_name == 'push'
-        uses: Craga89/standards/preview-status@v1
+        uses: Craga89/standards/preview-status@2683e4116e18f128c46fce9261c4bd5d1284e8ff # v1
         with:
           state: pending
           sha: ${{ github.sha }}
@@ -109,9 +109,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: Craga89/standards/setup-node@v1
+      - uses: Craga89/standards/setup-node@2683e4116e18f128c46fce9261c4bd5d1284e8ff # v1
       - if: inputs.playwright
-        uses: Craga89/standards/setup-playwright@v1
+        uses: Craga89/standards/setup-playwright@2683e4116e18f128c46fce9261c4bd5d1284e8ff # v1
       - name: Build for ${{ needs.name.outputs.base }}
         env:
           BUILD: ${{ inputs.build-command }}
@@ -148,7 +148,7 @@ jobs:
         with:
           name: preview
           path: ${{ runner.temp }}/preview
-      - uses: Craga89/standards/pages-store@v1
+      - uses: Craga89/standards/pages-store@2683e4116e18f128c46fce9261c4bd5d1284e8ff # v1
         with:
           target: ${{ needs.name.outputs.target }}
           source: ${{ runner.temp }}/preview
@@ -175,7 +175,7 @@ jobs:
       group: preview-comment-${{ needs.name.outputs.branch }}
       cancel-in-progress: false
     steps:
-      - uses: Craga89/standards/preview-comment@v1
+      - uses: Craga89/standards/preview-comment@2683e4116e18f128c46fce9261c4bd5d1284e8ff # v1
         with:
           branch: ${{ needs.name.outputs.branch }}
           url: ${{ needs.name.outputs.url }}
@@ -190,7 +190,7 @@ jobs:
     permissions:
       statuses: write
     steps:
-      - uses: Craga89/standards/preview-status@v1
+      - uses: Craga89/standards/preview-status@2683e4116e18f128c46fce9261c4bd5d1284e8ff # v1
         with:
           state: failure
           sha: ${{ github.sha }}
