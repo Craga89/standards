@@ -22,6 +22,7 @@ Shared GitHub Actions, config presets and coding guidelines for my repos, extrac
 - [Types](docs/guidelines/types.md)
 - [Testing](docs/guidelines/testing.md)
 - [GitHub Actions](docs/guidelines/github-actions.md)
+- [Branch previews](docs/guidelines/previews.md)
 - [Commits and pull requests](docs/guidelines/git.md)
 
 ## Composite actions
@@ -43,9 +44,12 @@ Pin each to a commit SHA, as you would any third-party action.
 
 ## Reusable workflows
 
-| Workflow      | Does                                                                                            | Inputs                         |
-| ------------- | ----------------------------------------------------------------------------------------------- | ------------------------------ |
-| `quality.yml` | `lint` + `format:check`, then `typecheck` + `test:unit` (optionally against a downloaded build) | `build-artifact`, `build-path` |
+| Workflow              | Does                                                                                            | Inputs                                                 |
+| --------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `quality.yml`         | `lint` + `format:check`, then `typecheck` + `test:unit` (optionally against a downloaded build) | `build-artifact`, `build-path`                         |
+| `preview.yml`         | Builds the branch for `/preview/<slug>/`, stores it, comments the link; removes it on delete    | `build-command`, `build-dir`, `base-env`, `playwright` |
+| `pages-deploy.yml`    | Publishes the `pages` branch to Pages, keeping the live site up, then marks previews live       | `store-branch`                                         |
+| `preview-comment.yml` | Comments the preview link when a PR is opened                                                   | `site-url`                                             |
 
 ```yaml
 jobs:
@@ -56,8 +60,11 @@ jobs:
       build-artifact: build
 ```
 
-Still to come (from the extraction plan): `playwright-suite`, `lighthouse`, `a11y-live`,
-`link-check` and `pages-deploy`.
+Branch previews need three small caller workflows; see [previews.md](docs/guidelines/previews.md)
+and `templates/.github/workflows/preview*.yml`.
+
+Still to come (from the extraction plan): `playwright-suite`, `lighthouse`, `a11y-live` and
+`link-check`.
 
 ## Adopting in a repo
 

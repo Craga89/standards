@@ -21,7 +21,8 @@
     "lint": "oxlint --disable-nested-config",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "verify": "pnpm run lint && pnpm run format:check"
+    "test:unit": "node --test \"tests/**/*.test.mjs\"",
+    "verify": "pnpm run lint && pnpm run format:check && pnpm run test:unit"
   },
   "devDependencies": {
     "oxfmt": "0.75.0",

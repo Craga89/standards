@@ -1,0 +1,56 @@
+name: Name a branch preview
+description: >-
+  Works out where a branch's preview lives: its folder (preview/<slug>/, unique per branch name)
+  and the address and base path it's served at, under wherever GitHub Pages serves the site. Needs
+  pages: read, unless site-url is given.
+inputs:
+  branch:
+    description: The branch being previewed
+    required: true
+  site-url:
+    description: Where Pages serves the site (blank = read it from the repository's Pages settings)
+    default: ''
+outputs:
+  slug:
+    description: The preview's folder name
+    value: ${{ steps.name.outputs.slug }}
+  target:
+    description: The folder on the store branch (preview/<slug>), for pages-store
+    value: ${{ steps.name.outputs.target }}
+  base:
+    description: The path to build the preview for (e.g. /preview/<slug>/ or /<repo>/preview/<slug>/)
+    value: ${{ steps.name.outputs.base }}
+  origin:
+    description: The site's origin (https://host)
+    value: ${{ steps.name.outputs.origin }}
+  url:
+    description: The preview's address
+    value: ${{ steps.name.outputs.url }}
+  list-url:
+    description: The address of the page listing every preview
+    value: ${{ steps.name.outputs.list-url }}
+runs:
+  using: composite
+  steps:
+    - id: name
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        BRANCH: ${{ inputs.branch }}
+        SITE_URL: ${{ inputs.site-url }}
+      run: |
+        set -euo pipefail
+        site="${SITE_URL:-$(gh api "repos/$GITHUB_REPOSITORY/pages" --jq .html_url)}"
+        # Pages reports http:// until HTTPS is enforced; the site is always served over https.
+        site="https://${site#*://}"; site="${site%/}/"
+        origin="$(node -p 'new URL(process.argv[1]).origin' "$site")"
+        path="$(node -p 'new URL(process.argv[1]).pathname' "$site")"
+        slug="$(node "$GITHUB_ACTION_PATH/../lib/previews.mjs" slug "$BRANCH")"
+        {
+          echo "slug=$slug"
+          echo "target=preview/$slug"
+          echo "base=${path}preview/$slug/"
+          echo "origin=$origin"
+          echo "url=${site}preview/$slug/"
+          echo "list-url=${site}preview/"
+        } >> "$GITHUB_OUTPUT"

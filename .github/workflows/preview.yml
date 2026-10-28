@@ -1,0 +1,198 @@
+# Branch previews: builds the pushed branch for /preview/<slug>/ (no waiting for the checks),
+# stores it on the pages branch next to the live site, and comments the link on the branch's pull
+# request, once. On a branch delete, removes its preview instead. The caller's preview-deploy
+# workflow then publishes it (pages-deploy.yml) and marks the commit's "Preview" status live.
+#
+#   name ─┬─ build ─ store ─ comment       (pending status on the commit while this runs)
+#         └─ (delete) ─ store
+#
+#   on:
+#     push:
+#       branches-ignore: [pages, 'dependabot/**']
+#     delete:
+#   concurrency:
+#     group: preview-${{ github.event_name == 'delete' && github.event.ref || github.ref_name }}
+#     cancel-in-progress: true
+#   jobs:
+#     preview:
+#       if: github.event_name != 'delete' || github.event.ref_type == 'branch'
+#       uses: Craga89/standards/.github/workflows/preview.yml@<sha> # v1.x.x
+#       permissions:
+#         contents: write
+#         pages: read
+#         statuses: write
+#         pull-requests: write
+#
+# The build gets the base path in $SITE_BASE (or the variable named by base-env), the site's origin
+# in $SITE_ORIGIN, the branch in $PREVIEW_BRANCH and ALLOW_INDEXING=false.
+name: Preview
+
+on:
+  workflow_call:
+    inputs:
+      build-command:
+        description: The command that builds the site
+        type: string
+        default: pnpm run build
+      build-dir:
+        description: Where the build writes the site
+        type: string
+        default: site
+      base-env:
+        description: The environment variable the build reads its base path from
+        type: string
+        default: SITE_BASE
+      playwright:
+        description: Install Playwright's Chromium before building
+        type: boolean
+        default: false
+      store-branch:
+        description: The branch that holds what Pages serves
+        type: string
+        default: pages
+      site-url:
+        description: Where Pages serves the site (blank = read it from the Pages settings)
+        type: string
+        default: ''
+    outputs:
+      url:
+        description: The preview's address
+        value: ${{ jobs.name.outputs.url }}
+
+permissions:
+  contents: read
+
+jobs:
+  name:
+    name: Name the preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pages: read # where Pages serves the site
+      statuses: write # the pending "Preview" status
+    outputs:
+      branch: ${{ steps.branch.outputs.branch }}
+      target: ${{ steps.name.outputs.target }}
+      base: ${{ steps.name.outputs.base }}
+      origin: ${{ steps.name.outputs.origin }}
+      url: ${{ steps.name.outputs.url }}
+      list-url: ${{ steps.name.outputs.list-url }}
+    steps:
+      - id: branch
+        env:
+          # On a delete the workflow runs on the default branch; the deleted one is in event.ref.
+          BRANCH: ${{ github.event_name == 'delete' && github.event.ref || github.ref_name }}
+        run: echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+      - id: name
+        uses: Craga89/standards/preview-name@v1
+        with:
+          branch: ${{ steps.branch.outputs.branch }}
+          site-url: ${{ inputs.site-url }}
+      - if: github.event_name == 'push'
+        uses: Craga89/standards/preview-status@v1
+        with:
+          state: pending
+          sha: ${{ github.sha }}
+          url: ${{ steps.name.outputs.url }}
+          description: Building the preview
+
+  build:
+    name: Build the preview
+    needs: name
+    if: github.event_name != 'delete'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: Craga89/standards/setup-node@v1
+      - if: inputs.playwright
+        uses: Craga89/standards/setup-playwright@v1
+      - name: Build for ${{ needs.name.outputs.base }}
+        env:
+          BUILD: ${{ inputs.build-command }}
+          BASE_ENV: ${{ inputs.base-env }}
+          BASE: ${{ needs.name.outputs.base }}
+          SITE_ORIGIN: ${{ needs.name.outputs.origin }}
+          PREVIEW_BRANCH: ${{ needs.name.outputs.branch }}
+          ALLOW_INDEXING: 'false'
+        run: |
+          export "$BASE_ENV=$BASE"
+          bash -c "$BUILD"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: preview
+          path: ${{ inputs.build-dir }}
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+
+  store:
+    name: Store the preview
+    needs: [name, build]
+    # Not always(): a newer push (or deleting the branch) cancels this run, and then nothing may be
+    # stored, or an older build could overwrite a newer preview or bring back a deleted one.
+    if: ${{ !cancelled() && needs.name.result == 'success' && (github.event_name == 'delete' || needs.build.result == 'success') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # the store branch
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - if: github.event_name != 'delete'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: preview
+          path: ${{ runner.temp }}/preview
+      - uses: Craga89/standards/pages-store@v1
+        with:
+          target: ${{ needs.name.outputs.target }}
+          source: ${{ runner.temp }}/preview
+          remove: ${{ github.event_name == 'delete' }}
+          branch: ${{ needs.name.outputs.branch }}
+          url: ${{ needs.name.outputs.url }}
+          store-branch: ${{ inputs.store-branch }}
+      - if: github.event_name != 'delete'
+        env:
+          URL: ${{ needs.name.outputs.url }}
+        run: |
+          echo "Preview, live in a minute or two once it's deployed: $URL" >> "$GITHUB_STEP_SUMMARY"
+
+  comment:
+    name: Comment the preview link
+    needs: [name, store]
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+    # One at a time per branch, so this and preview-comment.yml can't both post the comment.
+    concurrency:
+      group: preview-comment-${{ needs.name.outputs.branch }}
+      cancel-in-progress: false
+    steps:
+      - uses: Craga89/standards/preview-comment@v1
+        with:
+          branch: ${{ needs.name.outputs.branch }}
+          url: ${{ needs.name.outputs.url }}
+          list-url: ${{ needs.name.outputs.list-url }}
+
+  failed:
+    name: Mark the preview failed
+    needs: [name, build, store]
+    if: failure() && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      statuses: write
+    steps:
+      - uses: Craga89/standards/preview-status@v1
+        with:
+          state: failure
+          sha: ${{ github.sha }}
+          url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: The preview build failed

@@ -24,4 +24,5 @@ A repo that deviates says why in its README.
 - [Types](./types.md)
 - [Testing](./testing.md)
 - [GitHub Actions](./github-actions.md)
+- [Branch previews](./previews.md)
 - [Commits and pull requests](./git.md)

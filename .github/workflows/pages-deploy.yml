@@ -1,0 +1,93 @@
+# Publishes the store branch (the live site at the root, branch previews under preview/) to GitHub
+# Pages, then marks every preview it carries live on its commit (the "Preview" status, linking to
+# it). Call it after the live site or a preview is stored: from CI on the default branch, and from
+# a preview-deploy workflow started by the Preview workflow:
+#
+#   on:
+#     workflow_run:
+#       workflows: [Preview]
+#       types: [completed]
+#   jobs:
+#     deploy:
+#       if: github.event.workflow_run.conclusion == 'success'
+#       uses: Craga89/standards/.github/workflows/pages-deploy.yml@<sha> # v1.x.x
+#       permissions:
+#         contents: read
+#         pages: write
+#         id-token: write
+#         statuses: write
+#
+# workflow_run runs it from the default branch, the only branch the github-pages environment lets
+# deploy. The live site stays up throughout: Pages swaps to a new deployment only once it's
+# complete, and nothing is deployed until the store branch has a live site at its root.
+name: Deploy to GitHub Pages
+
+on:
+  workflow_call:
+    inputs:
+      store-branch:
+        description: The branch that holds what Pages serves
+        type: string
+        default: pages
+    outputs:
+      page_url:
+        description: Where Pages serves the site
+        value: ${{ jobs.deploy.outputs.page_url }}
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      statuses: write # the previews' "Preview" statuses
+    # One deploy at a time. A waiting deploy is replaced by a newer one, which is fine because each
+    # publishes whatever the store branch holds by then, and marks every preview in it.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.store-branch }}
+          path: pages
+          persist-credentials: false
+      # Until the live site has been stored once, publishing would replace it with only the
+      # previews: wait for that.
+      - name: Is the live site there?
+        id: ready
+        run: |
+          if [ -f pages/index.html ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
+          else echo "::warning title=Pages::The store branch has no live site yet, so nothing was deployed. The next deploy from the default branch will publish it."; fi
+      - if: steps.ready.outputs.ok == 'true'
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - if: steps.ready.outputs.ok == 'true'
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: pages
+      - id: deployment
+        if: steps.ready.outputs.ok == 'true'
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+      - if: steps.ready.outputs.ok == 'true'
+        uses: Craga89/standards/preview-status@v1
+        with:
+          published-dir: pages
+      - name: Mark the preview failed
+        if: failure() && github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push'
+        uses: Craga89/standards/preview-status@v1
+        with:
+          state: failure
+          sha: ${{ github.event.workflow_run.head_sha }}
+          url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          description: Built, but publishing to Pages failed

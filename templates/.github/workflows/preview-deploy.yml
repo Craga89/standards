@@ -1,0 +1,22 @@
+# Publishes the pages branch once Preview has stored a preview, then marks the commit's "Preview"
+# status live. A workflow of its own so it runs from the default branch, the only branch the
+# github-pages environment lets deploy.
+name: Preview deploy
+
+on:
+  workflow_run:
+    workflows: [Preview]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    uses: Craga89/standards/.github/workflows/pages-deploy.yml@<sha> # v1.0.0
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+      statuses: write

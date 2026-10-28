@@ -1,0 +1,52 @@
+# Comments a pull request's preview link when it's opened (once; see preview-comment/). Previews
+# pushed while a pull request is open get the comment from preview.yml instead; this covers a
+# branch pushed before its pull request existed.
+#
+#   on:
+#     pull_request:
+#       types: [opened, reopened]
+#   jobs:
+#     comment:
+#       uses: Craga89/standards/.github/workflows/preview-comment.yml@<sha> # v1.x.x
+#       permissions:
+#         pages: read
+#         pull-requests: write
+name: Preview comment
+
+on:
+  workflow_call:
+    inputs:
+      site-url:
+        description: Where Pages serves the site (blank = read it from the Pages settings)
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  comment:
+    name: Comment the preview link
+    # Only branches of this repository get previews (forks can't push to it).
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pages: read
+      pull-requests: write
+    concurrency:
+      group: preview-comment-${{ github.event.pull_request.head.ref }}
+      cancel-in-progress: false
+    steps:
+      - id: name
+        uses: Craga89/standards/preview-name@v1
+        with:
+          branch: ${{ github.event.pull_request.head.ref }}
+          site-url: ${{ inputs.site-url }}
+      # Every open pull request from the branch, not just this one: a run waiting in the
+      # concurrency group is replaced by a newer one, which then covers both.
+      - uses: Craga89/standards/preview-comment@v1
+        with:
+          branch: ${{ github.event.pull_request.head.ref }}
+          url: ${{ steps.name.outputs.url }}
+          list-url: ${{ steps.name.outputs.list-url }}
