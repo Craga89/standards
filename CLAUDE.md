@@ -21,7 +21,8 @@ Rules for changes:
 - A helper script an action needs lives inside that action's directory, or in `lib/` when several
   actions share it (GitHub downloads the whole repo for any action, so `$GITHUB_ACTION_PATH/../lib`
   works). Scripts get tests in `tests/`.
-- Pin third-party actions to a commit SHA with a `# vX.Y.Z` comment, and add any new action
+- Pin every third-party action, and any tool a workflow downloads, to a commit SHA with a
+  `# vX.Y.Z` comment (check it's that tag's: `git ls-remote <repo> 'refs/tags/vX.Y.Z^{}'`), and add any new action
   directory to `.github/dependabot.yml`.
 - Releases: tag `vX.Y.Z` and move `v1` to it. A breaking change starts `v2`.
 - Before committing: `pnpm run verify`. CI also runs actionlint.

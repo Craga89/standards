@@ -17,7 +17,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -color
+      # Pinned to v1.7.12's commit, like the actions.
+      - run: go run github.com/rhysd/actionlint/cmd/actionlint@914e7df21a07ef503a81201c76d2b11c789d3fca -color
 
   lint:
     name: Lint and format

@@ -2,7 +2,8 @@
 
 - **Pin every action to a full commit SHA**, with the version as a comment:
   `actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1`. Dependabot keeps them
-  current with one grouped PR a week. Pin `Craga89/standards` the same way.
+  current with one grouped PR a week. Pin `Craga89/standards` the same way, and any tool a
+  workflow downloads (`go run …@<sha>`, release binaries) too: a tag can be moved, a SHA can't.
 - **Least privilege.** `permissions: contents: read` at the top of every workflow, and anything
   more on the job that needs it, with a comment saying why. A reusable workflow can't get more
   than its calling job grants.
