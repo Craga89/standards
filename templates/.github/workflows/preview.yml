@@ -1,0 +1,35 @@
+# A preview of every branch at <site>/preview/<slug>/, rebuilt on each push without waiting for the
+# checks. Deleting the branch removes it. See Craga89/standards docs/guidelines/previews.md.
+name: Preview
+
+on:
+  push:
+    branches-ignore:
+      - pages # what Pages serves (written by the workflows)
+      - 'dependabot/**' # Dependabot's token can't write the pages branch
+      # Add any report branches (accessibility, lighthouse, ...) here.
+  delete:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Per branch, so a newer push (or deleting the branch) replaces a run that hasn't finished.
+  group: preview-${{ github.event_name == 'delete' && github.event.ref || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    # Deleting a tag has no preview to remove.
+    if: github.event_name != 'delete' || github.event.ref_type == 'branch'
+    uses: Craga89/standards/.github/workflows/preview.yml@<sha> # v1.0.0
+    permissions:
+      contents: write # the pages branch
+      pages: read # where Pages serves the site
+      statuses: write # the "Preview" status on the commit
+      pull-requests: write # the comment with the link
+    # with:
+    #   build-command: pnpm run build
+    #   base-env: SITE_BASE
+    #   playwright: false

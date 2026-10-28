@@ -11,7 +11,16 @@ updates:
       dev-dependencies:
         patterns: ['*']
   - package-ecosystem: github-actions
-    directories: ['/', '/setup-node', '/setup-playwright', '/publish-branch', '/report-meta']
+    directories:
+      - /
+      - /setup-node
+      - /setup-playwright
+      - /publish-branch
+      - /report-meta
+      - /preview-name
+      - /preview-status
+      - /preview-comment
+      - /pages-store
     schedule:
       interval: weekly
     groups:

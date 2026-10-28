@@ -1,0 +1,47 @@
+name: Store a build on the pages branch
+description: >-
+  The store branch (`pages` by default) holds everything GitHub Pages serves: the live site at the
+  root and a preview of each branch under preview/<slug>/. This puts a build in its place on that
+  branch (or removes a preview), prunes previews whose branch is gone, rewrites preview/index.html
+  and pushes. The pages-deploy workflow then publishes the branch. A live-site update never touches
+  preview/, and a preview never touches the live site. Concurrent runs retry until their push
+  lands, so no update is lost. Needs a checkout of the repository and contents: write.
+inputs:
+  target:
+    description: "Where the build goes: '' for the live site, or 'preview/<slug>' (from preview-name)"
+    default: ''
+  source:
+    description: The built site. Blank with remove.
+    default: ''
+  remove:
+    description: "'true' to delete the target instead (a deleted branch's preview)"
+    default: 'false'
+  branch:
+    description: The branch the build is from (recorded with a preview)
+    default: ''
+  sha:
+    description: The commit the build is from
+    default: ${{ github.sha }}
+  url:
+    description: Where the preview is served (recorded with it, for the commit status)
+    default: ''
+  store-branch:
+    description: The branch that holds what Pages serves
+    default: pages
+  stamp:
+    description: "Replace __BUILD_SHA__, __BUILD_SHORT__ and __BUILD_AT__ in the build's .html files"
+    default: 'true'
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        TARGET: ${{ inputs.target }}
+        SOURCE: ${{ inputs.source }}
+        REMOVE: ${{ inputs.remove }}
+        BRANCH: ${{ inputs.branch }}
+        SHA: ${{ inputs.sha }}
+        URL: ${{ inputs.url }}
+        STORE_BRANCH: ${{ inputs.store-branch }}
+        STAMP: ${{ inputs.stamp }}
+      run: '"$GITHUB_ACTION_PATH/store.sh"'

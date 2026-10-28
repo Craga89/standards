@@ -1,0 +1,17 @@
+# Comments the preview link on a pull request when it's opened, for branches pushed before their
+# pull request existed. Never posts twice.
+name: Preview comment
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  comment:
+    uses: Craga89/standards/.github/workflows/preview-comment.yml@<sha> # v1.0.0
+    permissions:
+      pages: read
+      pull-requests: write

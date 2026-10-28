@@ -1,0 +1,62 @@
+name: Preview commit status
+description: >-
+  Sets the "Preview" status on a commit, whose Details link opens the preview, so it shows in the
+  pull request's checks. Given a published directory instead of a commit, marks every preview in
+  it live (the ones not marked yet), so a preview whose own deploy was replaced by a newer one in
+  the queue is still marked. Needs statuses: write.
+inputs:
+  state:
+    description: pending, success, failure or error
+    default: success
+  sha:
+    description: The commit (blank with published-dir)
+    default: ''
+  url:
+    description: The preview's address, or for a failure the run's
+    default: ''
+  description:
+    description: The status's description (at most 140 characters)
+    default: ''
+  published-dir:
+    description: A directory just published to Pages; marks each preview in its preview/ live
+    default: ''
+  context:
+    description: The status's name
+    default: Preview
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        STATE: ${{ inputs.state }}
+        SHA: ${{ inputs.sha }}
+        URL: ${{ inputs.url }}
+        DESCRIPTION: ${{ inputs.description }}
+        DIR: ${{ inputs.published-dir }}
+        CONTEXT: ${{ inputs.context }}
+      run: |
+        set -euo pipefail
+        status() { # sha state url description
+          local desc="$4"; [ ${#desc} -le 140 ] || desc="${desc:0:137}..."
+          gh api "repos/$GITHUB_REPOSITORY/statuses/$1" -f state="$2" -f context="$CONTEXT" \
+            -f description="$desc" ${3:+-f target_url="$3"} > /dev/null
+        }
+        if [ -z "$DIR" ]; then
+          status "$SHA" "$STATE" "$URL" "$DESCRIPTION"
+          echo "::notice title=$CONTEXT::$STATE${URL:+: $URL}"
+          exit 0
+        fi
+        for f in "$DIR"/preview/*/_preview.json; do
+          [ -f "$f" ] || continue
+          sha="$(jq -r .sha "$f")"; url="$(jq -r '.url // ""' "$f")"
+          [ -n "$url" ] || continue
+          # The newest status for this context comes first.
+          now="$(gh api "repos/$GITHUB_REPOSITORY/commits/$sha/statuses" --jq "[.[] | select(.context == \"$CONTEXT\")][0].state" 2>/dev/null || true)"
+          [ "$now" = success ] && continue
+          if status "$sha" success "$url" "Live at ${url#https://}"; then
+            echo "Marked ${sha:0:7} live at $url"
+          else
+            echo "::warning::Couldn't mark ${sha:0:7} live"
+          fi
+        done

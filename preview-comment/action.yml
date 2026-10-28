@@ -1,0 +1,49 @@
+name: Comment the preview link
+description: >-
+  Posts a branch's preview link on its open pull request(s), once: a pull request that already has
+  the comment (found by a hidden marker) is left alone, since the link never changes. Run it in a
+  job with `concurrency: preview-comment-<branch>` so two runs can't both post. Needs
+  pull-requests: write.
+inputs:
+  branch:
+    description: The branch being previewed
+    required: true
+  url:
+    description: The preview's address (from preview-name)
+    required: true
+  list-url:
+    description: The page listing every preview (from preview-name)
+    default: ''
+  pr:
+    description: The pull request to comment on (blank = every open one from the branch)
+    default: ''
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+        BRANCH: ${{ inputs.branch }}
+        URL: ${{ inputs.url }}
+        LIST: ${{ inputs.list-url }}
+        PR: ${{ inputs.pr }}
+      run: |
+        set -euo pipefail
+        prs="$PR"
+        if [ -z "$prs" ]; then
+          prs="$(gh api "repos/$GITHUB_REPOSITORY/pulls?state=open&head=${GITHUB_REPOSITORY_OWNER}:${BRANCH}" --jq '.[].number')"
+        fi
+        marker='<!-- branch-preview -->'
+        for n in $prs; do
+          # Read them all first: grep -q stopping early would break the pipe and look like "no".
+          bodies="$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$n/comments" --jq '.[].body')"
+          if grep -qF "$marker" <<< "$bodies"; then
+            echo "#$n already has the preview link"
+            continue
+          fi
+          body="$marker
+        **Preview:** $URL
+
+        Rebuilt on every push to \`$BRANCH\`, before the checks run (usually live a minute or two after the push). The **Preview** status on the latest commit links here too.${LIST:+ [All previews]($LIST)}"
+          gh api "repos/$GITHUB_REPOSITORY/issues/$n/comments" -f body="$body" --jq '.html_url'
+        done
