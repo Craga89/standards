@@ -1,0 +1,8 @@
+{
+  "extends": "@craga89/standards/tsconfig/base",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node"]
+  },
+  "include": ["tools/**/*.mjs", "tests/**/*.mjs", "playwright.config.mjs"]
+}

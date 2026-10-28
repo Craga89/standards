@@ -1,10 +1,12 @@
-# CI for this repository itself.
+# Checks for this repo itself: the workflows and actions (actionlint), and the configs and docs
+# (oxfmt, oxlint).
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,15 +14,17 @@ permissions:
 jobs:
   actionlint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-      - name: actionlint
-        run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -color
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: go run github.com/rhysd/actionlint/cmd/actionlint@v1.7.12 -color
 
-  format-and-lint:
+  lint:
+    name: Lint and format
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
-      - uses: ./.github/actions/setup-node-pnpm
-      - run: pnpm exec oxfmt --check
-      - run: pnpm exec oxlint --disable-nested-config --format github
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./setup-node
+      - run: pnpm run lint
+      - run: pnpm run format:check

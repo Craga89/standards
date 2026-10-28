@@ -1,14 +1,7 @@
 {
   "$schema": "../../node_modules/oxfmt/configuration_schema.json",
-  "printWidth": 100,
-  "tabWidth": 2,
-  "useTabs": false,
-  "semi": true,
-  "singleQuote": false,
+  "printWidth": 120,
+  "singleQuote": true,
   "trailingComma": "all",
-  "arrowParens": "always",
-  "endOfLine": "lf",
-  "sortImports": true,
-  "sortPackageJson": true,
-  "ignorePatterns": ["dist/**", "build/**", "coverage/**", ".astro/**", "pnpm-lock.yaml"]
+  "ignorePatterns": ["pnpm-lock.yaml"]
 }

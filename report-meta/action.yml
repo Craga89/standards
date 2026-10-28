@@ -1,0 +1,24 @@
+name: Report metadata
+description: >-
+  Write commit.txt, run.txt and at.txt (the commit, the workflow run's URL and the UTC time) into
+  a report directory, so a report published with publish-branch says where it came from.
+inputs:
+  dir:
+    description: The directory to write the files into (created if missing)
+    required: true
+  sha:
+    description: The commit the report is for
+    default: ${{ github.sha }}
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        DIR: ${{ inputs.dir }}
+        SHA: ${{ inputs.sha }}
+      run: |
+        set -euo pipefail
+        mkdir -p "$DIR"
+        echo "$SHA" > "$DIR/commit.txt"
+        echo "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" > "$DIR/run.txt"
+        date -u +%FT%TZ > "$DIR/at.txt"

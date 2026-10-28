@@ -1,0 +1,54 @@
+# Lint, format, types and unit tests: the checks every repo runs on every change.
+#
+#   jobs:
+#     quality:
+#       uses: Craga89/standards/.github/workflows/quality.yml@<sha> # v1.x.x
+#       with:
+#         build-artifact: build # optional, when the unit tests read the build output
+#
+# Runs the caller's `lint`, `format:check`, `typecheck` and `test:unit` package scripts. Triggers,
+# concurrency and the job graph around this stay in the calling repo.
+name: Quality
+
+on:
+  workflow_call:
+    inputs:
+      build-artifact:
+        description: An artifact to download before the unit tests (e.g. 'build'); empty to skip
+        type: string
+        default: ''
+      build-path:
+        description: Where to put that artifact
+        type: string
+        default: site
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint and format
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # A reusable workflow's ./ paths resolve to the caller's checkout, so sibling actions are
+      # referenced by owner/repo/path@ref.
+      - uses: Craga89/standards/setup-node@v1
+      - run: pnpm run lint
+      - run: pnpm run format:check
+
+  unit:
+    name: Types and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: Craga89/standards/setup-node@v1
+      - if: inputs.build-artifact != ''
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.build-artifact }}
+          path: ${{ inputs.build-path }}
+      - run: pnpm run typecheck
+      - run: pnpm run test:unit

@@ -1,13 +1,20 @@
+# Every change: lint, format, types and unit tests (shared), then this repo's own jobs.
+# Replace <sha> with the commit of the standards release you want; Dependabot bumps it.
 name: CI
 
 on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
-  ci:
-    uses: Craga89/standards/.github/workflows/node-ci.yml@v1
+  quality:
+    uses: Craga89/standards/.github/workflows/quality.yml@<sha> # v1.0.0

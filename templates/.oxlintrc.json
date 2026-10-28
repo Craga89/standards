@@ -1,4 +1,4 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "extends": ["./node_modules/@craga89/standards/configs/oxlint/react.json"]
+  "extends": ["./node_modules/@craga89/standards/configs/oxlint/astro.json"]
 }

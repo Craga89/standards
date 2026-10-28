@@ -1,35 +1,31 @@
 # Package management: pnpm
 
-Every repo uses **pnpm**. Never commit `package-lock.json`, `yarn.lock` or `bun.lock`.
+Every repo uses pnpm. Never commit `package-lock.json`, `yarn.lock` or `bun.lock`.
 
-## Rules
-
-- Pin the pnpm version with the `packageManager` field in `package.json`. CI and Corepack both
-  read it, so local and CI versions can't drift:
-  ```json
-  { "packageManager": "pnpm@12.15.0" }
-  ```
-- Pin Node with `.nvmrc` (major only, e.g. `24`) and mirror it in `engines.node`.
-- Commit `pnpm-lock.yaml`. CI installs with `pnpm install --frozen-lockfile`. The shared
-  `setup-node-pnpm` action does this for you.
-- Use `pnpm exec <bin>` / `pnpm dlx <pkg>`. Don't use `npx`.
-- Add dependencies with `pnpm add` (`-D` for dev). Don't hand-edit versions and skip the install.
-- Monorepos use pnpm workspaces (`pnpm-workspace.yaml`) and the `workspace:*` protocol for
-  internal packages. Run tasks with `pnpm -r` / `pnpm --filter <name>`.
-- Only allow dependency build scripts you need (`onlyBuiltDependencies` in
-  `pnpm-workspace.yaml`). Review new entries in PRs.
+- Pin pnpm in `package.json` with `"packageManager": "pnpm@12.15.0"`. The `setup-node` action
+  reads it, so CI and local versions match.
+- Pin Node in `.node-version` (major only, e.g. `26`) and mirror it in `engines.node`.
+- Use `pnpm install`, `pnpm <script>` and `pnpm exec <bin>`. Never `npm` or `npx`.
+- Commit `pnpm-lock.yaml` with every dependency change. CI installs with
+  `pnpm install --frozen-lockfile`.
+- Pin dev dependencies to exact versions. Dependabot bumps them weekly in one grouped PR.
+- Dependency install scripts only run when listed under `allowBuilds` in `pnpm-workspace.yaml`.
+  Start with `allowBuilds: {}` and review any addition in its PR.
 
 ## Script names
 
-Use these names so the shared CI workflow picks them up:
+The shared workflows call these, so keep the names:
 
-| Script         | Purpose                           |
-| -------------- | --------------------------------- |
-| `dev`          | Local dev server                  |
-| `build`        | Production build                  |
-| `typecheck`    | `tsc --noEmit` (or `astro check`) |
-| `test`         | `vitest run`                      |
-| `lint`         | `oxlint`                          |
-| `lint:fix`     | `oxlint --fix`                    |
-| `format`       | `oxfmt`                           |
-| `format:check` | `oxfmt --check`                   |
+| Script         | Runs                                                                 |
+| -------------- | -------------------------------------------------------------------- |
+| `dev`          | The dev server (`astro dev` / `vite`)                                |
+| `build`        | The production build                                                 |
+| `lint`         | `oxlint`                                                             |
+| `format`       | `oxfmt .`                                                            |
+| `format:check` | `oxfmt --check .`                                                    |
+| `typecheck`    | `astro check && tsc -p tsconfig.node.json` (or `tsc`)                |
+| `test`         | `test:unit` then `test:e2e`                                          |
+| `test:unit`    | `node --test` with coverage thresholds                               |
+| `test:e2e`     | `playwright test --project=desktop --project=mobile`                 |
+| `test:a11y`    | The axe projects (`a11y-desktop`, `a11y-mobile`)                     |
+| `verify`       | `lint`, `format:check`, `typecheck`, `test:unit`: run before pushing |

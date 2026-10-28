@@ -1,79 +1,78 @@
 # standards
 
-Shared engineering standards for my projects: reusable **GitHub Actions**, shared
-**oxlint / oxfmt / TypeScript configs**, and the **coding guidelines** behind them.
+Shared GitHub Actions, config presets and coding guidelines for my repos, extracted from
+[portfolio](https://github.com/Craga89/portfolio) and [craigsworks](https://github.com/Craga89/craigsworks).
 
-## The stack at a glance
-
-| Concern         | Choice                             |
-| --------------- | ---------------------------------- |
-| Package manager | pnpm (pinned via `packageManager`) |
-| Lint / format   | oxlint + oxfmt                     |
-| Apps & libs     | Vite (React + TS)                  |
-| Content sites   | Astro                              |
-| Tests           | Vitest                             |
-| Language        | TypeScript, strict, ESM            |
+| Concern          | Choice                                                   |
+| ---------------- | -------------------------------------------------------- |
+| Package manager  | pnpm, pinned via `packageManager`                        |
+| Lint / format    | oxlint + oxfmt                                           |
+| Sites            | Astro                                                    |
+| Apps & libraries | Vite                                                     |
+| Types            | `tsc` strict, JavaScript included (`checkJs`)            |
+| Tests            | `node --test`, Playwright, axe (WCAG 2.2 AA), Lighthouse |
+| CI               | GitHub Actions, SHA-pinned, Dependabot weekly            |
 
 ## Guidelines
 
 - [Tooling overview](docs/guidelines/tooling.md)
-- [Package management (pnpm)](docs/guidelines/package-management.md)
-- [Linting and formatting (oxlint + oxfmt)](docs/guidelines/linting-and-formatting.md)
-- [Choosing Vite or Astro](docs/guidelines/vite-vs-astro.md)
-- [TypeScript](docs/guidelines/typescript.md)
-- [Git and pull requests](docs/guidelines/git.md)
+- [Package management](docs/guidelines/package-management.md)
+- [Linting and formatting](docs/guidelines/linting-and-formatting.md)
+- [Choosing Astro or Vite](docs/guidelines/astro-vs-vite.md)
+- [Types](docs/guidelines/types.md)
+- [Testing](docs/guidelines/testing.md)
+- [GitHub Actions](docs/guidelines/github-actions.md)
+- [Commits and pull requests](docs/guidelines/git.md)
+
+## Composite actions
+
+Pin each to a commit SHA, as you would any third-party action.
+
+| Action             | Does                                                                                                               | Inputs                         |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
+| `setup-node`       | pnpm from `packageManager`, Node from `.node-version` with the pnpm store cached, `pnpm install --frozen-lockfile` | `working-directory`, `install` |
+| `setup-playwright` | Chromium for the installed Playwright version, cached, with its system libraries. Run after `setup-node`           | none                           |
+| `publish-branch`   | Replaces a branch's contents with a directory, as one commit with no history (report branches)                     | `branch`, `source`, `message`  |
+| `report-meta`      | Writes `commit.txt`, `run.txt` and `at.txt` into a report directory                                                | `dir`, `sha`                   |
+
+```yaml
+- uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+- uses: Craga89/standards/setup-node@<sha> # v1.0.0
+- uses: Craga89/standards/setup-playwright@<sha> # v1.0.0
+```
+
+## Reusable workflows
+
+| Workflow      | Does                                                                                            | Inputs                         |
+| ------------- | ----------------------------------------------------------------------------------------------- | ------------------------------ |
+| `quality.yml` | `lint` + `format:check`, then `typecheck` + `test:unit` (optionally against a downloaded build) | `build-artifact`, `build-path` |
+
+```yaml
+jobs:
+  quality:
+    needs: build
+    uses: Craga89/standards/.github/workflows/quality.yml@<sha> # v1.0.0
+    with:
+      build-artifact: build
+```
+
+Still to come (from the extraction plan): `playwright-suite`, `lighthouse`, `a11y-live`,
+`link-check` and `pages-deploy`.
 
 ## Adopting in a repo
 
 ```bash
-pnpm add -D oxlint oxfmt github:Craga89/standards#v1
+pnpm add -D -E oxlint oxfmt github:Craga89/standards#v1
 ```
 
-Then copy the files from [`templates/`](templates):
-
-| File                       | What it does                                            |
-| -------------------------- | ------------------------------------------------------- |
-| `.oxlintrc.json`           | Extends a shared lint preset (`base`, `react`, `astro`) |
-| `oxfmt.config.ts`          | Spreads the shared format options                       |
-| `.github/workflows/ci.yml` | Calls the reusable CI workflow                          |
-| `AGENTS.md` / `CLAUDE.md`  | Points coding agents at these standards                 |
-
-And extend a shared tsconfig: `{ "extends": "@craga89/standards/tsconfig/vite-react" }`.
-
-## GitHub Actions
-
-### `setup-node-pnpm` (composite action)
-
-Installs pnpm from `packageManager`, sets up Node (from `.nvmrc`) with the pnpm store
-cached, then runs `pnpm install --frozen-lockfile`.
-
-```yaml
-- uses: actions/checkout@v7
-- uses: Craga89/standards/.github/actions/setup-node-pnpm@v1
-  # with:
-  #   node-version: 24
-  #   working-directory: apps/web
-  #   install: false
-```
-
-### `node-ci.yml` (reusable workflow)
-
-Runs `oxfmt --check`, `oxlint`, then the `typecheck`, `test` and `build` scripts if present.
-
-```yaml
-jobs:
-  ci:
-    uses: Craga89/standards/.github/workflows/node-ci.yml@v1
-    # with:
-    #   working-directory: apps/web
-    #   run-build: false
-```
+Then copy what applies from [`templates/`](templates): `.oxlintrc.json`, `oxfmt.config.ts`,
+`tsconfig.node.json`, `.editorconfig`, `pnpm-workspace.yaml`, `.github/dependabot.yml`,
+`.github/workflows/ci.yml`, and `AGENTS.md` + `CLAUDE.md` for coding agents.
 
 ## Versioning
 
-Consumers pin to the major tag `v1`. Non-breaking changes move `v1` forward. Breaking
-changes get a new major tag. Exact tags (`v1.2.0`) are also published for anyone who wants
-to pin precisely.
+Tags `vX.Y.Z` for each release, plus `v1` moved forward on every non-breaking one. Callers pin a
+SHA and let Dependabot bump it. A breaking change starts `v2`.
 
 ## License
 

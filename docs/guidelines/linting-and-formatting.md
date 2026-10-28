@@ -1,79 +1,58 @@
-# Linting and formatting: oxlint + oxfmt
+# Linting and formatting: oxlint and oxfmt
 
-All repos lint with **oxlint** and format with **oxfmt**, both from the
-[Oxc](https://oxc.rs) project. Don't add ESLint, Prettier or Biome alongside them. If a rule
-you need only exists as an ESLint plugin, check oxlint's `jsPlugins` support before adding a
-second linter.
+Every repo lints with oxlint and formats with oxfmt. Don't add ESLint, Prettier or Biome next to
+them.
 
 ## Setup
 
 ```bash
-pnpm add -D oxlint oxfmt github:Craga89/standards#v1
+pnpm add -D -E oxlint oxfmt github:Craga89/standards#v1
 ```
 
-**`.oxlintrc.json`**: extend one shared preset:
+**`.oxlintrc.json`** extends a preset and adds only the repo's own paths:
 
 ```json
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "extends": ["./node_modules/@craga89/standards/configs/oxlint/react.json"]
+  "extends": ["./node_modules/@craga89/standards/configs/oxlint/astro.json"]
 }
 ```
 
-| Preset       | Use for                                      |
-| ------------ | -------------------------------------------- |
-| `base.json`  | Node services, libraries, CLIs               |
-| `react.json` | Vite + React apps, React component libraries |
-| `astro.json` | Astro sites                                  |
+| Preset       | Adds to `base`                                                                          |
+| ------------ | --------------------------------------------------------------------------------------- |
+| `base.json`  | The shared rules. Use it directly for Node tools and libraries                          |
+| `astro.json` | Ignores `site/` and `.astro/`; browser env in `src/`; node env in `tools/` and `tests/` |
+| `vite.json`  | Ignores `dist/`; browser env in `src/`; node env in `tools/`, `tests/` and configs      |
 
-oxlint's `extends` only accepts file paths, so the presets are consumed from `node_modules`.
+oxlint's `extends` takes file paths only, which is why the presets are read from `node_modules`.
+Overrides in the repo's own file are added to the preset's.
 
-**`oxfmt.config.ts`**: oxfmt has no `extends`, so spread the shared options:
+**`oxfmt.config.ts`** spreads the shared options, because oxfmt has no `extends`. oxfmt finds a
+`.ts` config on its own (not a `.mjs` one):
 
 ```ts
-import standards from "@craga89/standards/oxfmt" with { type: "json" };
+import standards from '@craga89/standards/oxfmt' with { type: 'json' };
 
 export default {
   ...standards,
+  ignorePatterns: [...standards.ignorePatterns, 'site/**'],
 };
 ```
 
-For Astro repos, enable `.astro` formatting and install its compiler
-(`pnpm add -D @astrojs/compiler-rs`):
+## House style (oxfmt)
 
-```ts
-export default {
-  ...standards,
-  astro: true,
-};
-```
+- 120-column lines, 2-space indent, LF, final newline (`.editorconfig` matches).
+- Single quotes, semicolons, trailing commas everywhere.
 
-## Style decisions (enforced by oxfmt)
+If oxfmt accepts it, it's fine: style isn't discussed in review. To change the house style, open
+a PR here.
 
-- 2-space indent, 100-column print width, LF line endings.
-- Double quotes, semicolons, trailing commas everywhere.
-- Imports sorted automatically (`sortImports`), `package.json` keys sorted.
+## Lint policy (oxlint)
 
-Don't argue about style in review. If oxfmt accepts it, it's fine. To change the house style,
-open a PR here.
-
-## Lint policy
-
-- `correctness` rules are errors, `suspicious` and `perf` are warnings.
-- CI fails on errors. Fix warnings when you touch the code, and don't add new ones.
-- Suppress with a reason: `// oxlint-disable-next-line rule-name -- why`.
-- Use `import type` for type-only imports (`typescript/consistent-type-imports`).
-- Use the `node:` protocol for built-ins (`node:fs`, not `fs`).
-- Prefix intentionally unused variables and arguments with `_`.
-
-## Editor
-
-Install the **Oxc** VS Code extension (`oxc.oxc-vscode`). It provides both lint and format via
-LSP. Set it as the default formatter and enable format-on-save:
-
-```json
-{
-  "editor.defaultFormatter": "oxc.oxc-vscode",
-  "editor.formatOnSave": true
-}
-```
+- `correctness` and `suspicious` are errors, `perf` is a warning.
+- `eqeqeq` always, except `== null` (which checks for both null and undefined).
+- `prefer-const`, no `var`, no empty blocks (an empty `catch` included), no import cycles.
+- `console` is allowed: these repos have tools and scripts, not libraries.
+- JSDoc tags are checked. `@satisfies` is allowed.
+- Disable a rule on one line, with the reason:
+  `// oxlint-disable-next-line rule-name -- why`.

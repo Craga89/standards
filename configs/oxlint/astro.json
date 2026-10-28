@@ -1,11 +1,20 @@
 {
   "$schema": "../../node_modules/oxlint/configuration_schema.json",
   "extends": ["./base.json"],
-  "env": {
-    "browser": true
-  },
-  "globals": {
-    "Astro": "readonly"
-  },
-  "ignorePatterns": [".astro/**", "src/env.d.ts"]
+  "ignorePatterns": ["site/**", ".astro/**"],
+  "overrides": [
+    {
+      "files": ["src/**/*.js", "src/**/*.ts"],
+      "env": { "browser": true }
+    },
+    {
+      "files": ["tools/**/*.mjs", "tests/**"],
+      "env": { "node": true },
+      "rules": { "no-empty-pattern": "off" }
+    },
+    {
+      "files": ["src/**/*.ts", "src/**/*.astro"],
+      "rules": { "import/no-unassigned-import": "off" }
+    }
+  ]
 }

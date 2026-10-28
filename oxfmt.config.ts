@@ -1,5 +1,3 @@
-import standards from "./configs/oxfmt/base.json" with { type: "json" };
+import standards from './configs/oxfmt/base.json' with { type: 'json' };
 
-export default {
-  ...standards,
-};
+export default standards;

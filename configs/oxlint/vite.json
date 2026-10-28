@@ -1,0 +1,16 @@
+{
+  "$schema": "../../node_modules/oxlint/configuration_schema.json",
+  "extends": ["./base.json"],
+  "ignorePatterns": ["dist/**"],
+  "overrides": [
+    {
+      "files": ["src/**"],
+      "env": { "browser": true }
+    },
+    {
+      "files": ["tools/**/*.mjs", "tests/**", "*.config.{js,mjs,ts}"],
+      "env": { "node": true },
+      "rules": { "no-empty-pattern": "off" }
+    }
+  ]
+}

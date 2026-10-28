@@ -1,11 +1,12 @@
-# Agent instructions
+# Working on this repo
 
-This repo follows https://github.com/Craga89/standards. In short:
+This repo follows [Craga89/standards](https://github.com/Craga89/standards). The short version:
 
-- Use **pnpm** only (`pnpm add`, `pnpm exec`, `pnpm dlx`). Never npm/npx/yarn, and never
-  create `package-lock.json`.
-- Lint with **oxlint**, format with **oxfmt**. Don't add ESLint, Prettier or Biome.
-- Before finishing a change, run: `pnpm format && pnpm lint && pnpm typecheck && pnpm test`.
-- TypeScript strict, ESM, named exports, `import type` for type-only imports, `node:`
-  prefix for built-ins.
-- Commit messages use Conventional Commits.
+- **pnpm only**, pinned in `package.json` (`packageManager`). Use `pnpm install`, `pnpm <script>`
+  and `pnpm exec <bin>`, never npm or npx, and commit `pnpm-lock.yaml` with any dependency change.
+- **oxlint and oxfmt** for linting and formatting. Don't add ESLint, Prettier or Biome.
+- **Run `pnpm run verify`** (lint, format check, types, unit tests) before pushing.
+- **Types are checked by `tsc`**, JavaScript included (`checkJs`). Write ESM.
+- **Actions are pinned to commit SHAs.** Keep the `# vX.Y.Z` comment when you change one.
+- **Commits and PR titles** follow Conventional Commits: `type(scope): summary`. See
+  [git.md](https://github.com/Craga89/standards/blob/main/docs/guidelines/git.md).

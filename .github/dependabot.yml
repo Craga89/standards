@@ -1,0 +1,19 @@
+# Weekly updates for the dev dependencies (the npm ecosystem, which covers pnpm-lock.yaml) and the
+# pinned GitHub Actions, including the ones inside the composite actions, grouped into one pull
+# request each.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      dev-dependencies:
+        patterns: ['*']
+  - package-ecosystem: github-actions
+    directories: ['/', '/setup-node', '/setup-playwright', '/publish-branch', '/report-meta']
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']

@@ -1,9 +1,19 @@
-# Git and pull requests
+# Commits and pull requests
 
-- Default branch is `main`. Branch per change: `feat/…`, `fix/…`, `chore/…`, `docs/…`.
-- Commit messages follow [Conventional Commits](https://www.conventionalcommits.org):
-  `feat: add pnpm setup action`, `fix(ci): cache key for monorepos`.
-- Keep PRs small and focused. The description explains _why_, plus anything a reviewer
-  can't see in the diff.
-- CI (format, lint, typecheck, test, build) must pass before merge. Squash-merge by default.
-- Never commit secrets, `.env` files or build output.
+Commit messages and pull request titles follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+type(scope): summary in the imperative, lowercase, no full stop
+```
+
+- **Types:** `feat` (something new for users), `fix` (a bug), `docs`, `style` (formatting only),
+  `refactor`, `perf`, `test`, `build` (dependencies, build config, fonts), `ci` (workflows and
+  actions), `chore` (anything else).
+- **Scopes** are optional and listed per repo in its `CLAUDE.md` (e.g. `pages`, `a11y`, `e2e`,
+  `deploy`, `lighthouse`, `deps`).
+- **Breaking changes:** `!` after the type or scope, plus a `BREAKING CHANGE:` footer saying
+  what breaks.
+- The body, when there is one, explains what changed and why, wrapped at about 100 characters.
+- PRs are squash-merged, so the PR title becomes the commit on the default branch. Give it the
+  same form.
+- CI passes before merge. Never commit secrets, `.env` files or build output.

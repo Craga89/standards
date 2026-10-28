@@ -167,10 +167,10 @@ importers:
   .:
     devDependencies:
       oxfmt:
-        specifier: ^0.75.0
+        specifier: 0.75.0
         version: 0.75.0
       oxlint:
-        specifier: ^1.90.0
+        specifier: 1.90.0
         version: 1.90.0
 
 packages:
