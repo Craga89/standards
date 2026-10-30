@@ -19,7 +19,8 @@ pnpm add --config -E @craga89/standards
 ```yaml
 # pnpm-workspace.yaml
 configDependencies:
-  '@craga89/standards': 1.0.0
+  # The version and its integrity (from pnpm-lock.yaml), so pnpm 10 can install it too.
+  '@craga89/standards': 1.0.1+sha512-…
 bootConfig:
   # Our own package, reviewed in Craga89/standards: no waiting a day for a new release.
   minimumReleaseAgeExclude:
@@ -28,7 +29,15 @@ bootConfig:
 
 pnpm 12 doesn't install a release in its first day (`minimumReleaseAge`); the `bootConfig`
 exclusion lifts that for this package only, so a new release can be picked up straight away.
-Update it with `pnpm update @craga89/standards`.
+
+`pnpm add --config` writes the plain version. Add the integrity yourself: copy it from the
+`'@craga89/standards@<version>'` entry in `pnpm-lock.yaml` into the line above, as
+`<version>+sha512-…`. pnpm 12 accepts either form, but pnpm 10 refuses a config dependency without
+its integrity before it gets to switch to the pinned pnpm.
+
+**Updating:** `pnpm update` skips a config dependency pinned with its integrity. Run
+`pnpm add --config -E @craga89/standards@<version>` instead, then put the new integrity back the
+same way.
 
 **`.oxlintrc.json`** extends a preset and adds only the repo's own paths:
 
