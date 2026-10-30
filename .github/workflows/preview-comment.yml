@@ -39,13 +39,13 @@ jobs:
       cancel-in-progress: false
     steps:
       - id: name
-        uses: Craga89/standards/preview-name@v1
+        uses: Craga89/standards/preview-name@2683e4116e18f128c46fce9261c4bd5d1284e8ff # v1
         with:
           branch: ${{ github.event.pull_request.head.ref }}
           site-url: ${{ inputs.site-url }}
       # Every open pull request from the branch, not just this one: a run waiting in the
       # concurrency group is replaced by a newer one, which then covers both.
-      - uses: Craga89/standards/preview-comment@v1
+      - uses: Craga89/standards/preview-comment@2683e4116e18f128c46fce9261c4bd5d1284e8ff # v1
         with:
           branch: ${{ github.event.pull_request.head.ref }}
           url: ${{ steps.name.outputs.url }}
