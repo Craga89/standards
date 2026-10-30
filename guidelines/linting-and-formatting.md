@@ -5,16 +5,37 @@ them.
 
 ## Setup
 
+The presets come from the [`@craga89/standards`](https://www.npmjs.com/package/@craga89/standards)
+npm package, installed as a pnpm
+[config dependency](https://pnpm.io/config-dependencies): pnpm installs it before anything else,
+into `node_modules/.pnpm-config/@craga89/standards/`, and records its integrity in
+`pnpm-lock.yaml`.
+
 ```bash
-pnpm add -D -E oxlint oxfmt github:Craga89/standards#v1
+pnpm add -D -E oxlint oxfmt
+pnpm add --config -E @craga89/standards
 ```
+
+```yaml
+# pnpm-workspace.yaml
+configDependencies:
+  '@craga89/standards': 1.0.0
+bootConfig:
+  # Our own package, reviewed in Craga89/standards: no waiting a day for a new release.
+  minimumReleaseAgeExclude:
+    - '@craga89/standards'
+```
+
+pnpm 12 doesn't install a release in its first day (`minimumReleaseAge`); the `bootConfig`
+exclusion lifts that for this package only, so a new release can be picked up straight away.
+Update it with `pnpm update @craga89/standards`.
 
 **`.oxlintrc.json`** extends a preset and adds only the repo's own paths:
 
 ```json
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "extends": ["./node_modules/@craga89/standards/configs/oxlint/astro.json"]
+  "extends": ["./node_modules/.pnpm-config/@craga89/standards/configs/oxlint/astro.json"]
 }
 ```
 
@@ -31,7 +52,7 @@ Overrides in the repo's own file are added to the preset's.
 `.ts` config on its own (not a `.mjs` one):
 
 ```ts
-import standards from '@craga89/standards/oxfmt' with { type: 'json' };
+import standards from './node_modules/.pnpm-config/@craga89/standards/configs/oxfmt/base.json' with { type: 'json' };
 
 export default {
   ...standards,

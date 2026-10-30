@@ -1,4 +1,12 @@
 # pnpm settings (the package manager is pinned in package.json's packageManager field).
+# Craga89/standards' configs come from a config dependency, installed before anything else into
+# node_modules/.pnpm-config/. Update it with `pnpm update @craga89/standards`.
+configDependencies:
+  '@craga89/standards': 1.0.0
+bootConfig:
+  # Our own package, reviewed in Craga89/standards: no waiting a day for a new release.
+  minimumReleaseAgeExclude:
+    - '@craga89/standards'
 # Dependencies' install scripts only run when they're allowed here, and pnpm fails the install if
 # one hasn't been reviewed.
 allowBuilds: {}
