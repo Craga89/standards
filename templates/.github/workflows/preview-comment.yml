@@ -13,5 +13,6 @@ jobs:
   comment:
     uses: Craga89/standards/.github/workflows/preview-comment.yml@<sha> # v1.0.0
     permissions:
+      contents: read # the shared workflow declares it, and can't get more than this grants
       pages: read
       pull-requests: write

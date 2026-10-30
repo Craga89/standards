@@ -9,6 +9,7 @@
 #     comment:
 #       uses: Craga89/standards/.github/workflows/preview-comment.yml@<sha> # v1.x.x
 #       permissions:
+#         contents: read
 #         pages: read
 #         pull-requests: write
 name: Preview comment
