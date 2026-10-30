@@ -20,7 +20,7 @@ jobs:
       - name: Every action is pinned to a commit
         run: |
           # Local paths (./) aside, every uses: names a full commit SHA, Craga89/standards included.
-          if grep -rnE '^\s*(- )?uses:' .github/workflows */action.yml templates | grep -vE 'uses: \./|@[0-9a-f]{40}( |$)|@<sha>'; then
+          if grep -rnE '^\s*(- )?uses:' .github/workflows ./*/action.yml templates | grep -vE 'uses: \./|@[0-9a-f]{40}( |$)|@<sha>'; then
             echo "::error::Pin the actions above to a commit SHA (with a # vX.Y.Z comment)"; exit 1
           fi
       # Pinned to v1.7.12's commit, like the actions.
