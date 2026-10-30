@@ -88,7 +88,9 @@ Then copy what applies from [`templates/`](templates): `.oxlintrc.json`, `oxfmt.
 
 `package.json`'s version is the release. Merging a version bump to `main` publishes it to npm and
 tags the commit `vX.Y.Z` ([`release.yml`](.github/workflows/release.yml)); other pushes publish
-nothing. Repos pin the actions and workflows by commit SHA (Dependabot bumps them) and the
+nothing. Publishing uses npm trusted publishing (GitHub's OIDC token, with provenance), so there's
+no npm token anywhere: the package's trusted publisher on npmjs.com is this repo's `release.yml`,
+allowed to `npm publish`. Repos pin the actions and workflows by commit SHA (Dependabot bumps them) and the
 package by version and integrity (`pnpm update @craga89/standards`). A breaking change bumps the
 major version.
 

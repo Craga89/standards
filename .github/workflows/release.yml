@@ -1,9 +1,11 @@
-# Publishes @craga89/standards to npm when package.json has a version npm doesn't, then tags the
-# commit vX.Y.Z. A release is a version bump merged to main; every other push is a no-op.
+# Publishes @craga89/standards to npm when package.json has a version npm doesn't, and tags the
+# commit vX.Y.Z when that version's tag doesn't exist yet (so a version published by hand gets its
+# tag too). A release is a version bump merged to main; every other push is a no-op.
 #
-# npm sign-in: trusted publishing (OIDC), once the package names this repo and release.yml as its
-# trusted publisher on npmjs.com, which needs the package to exist. The very first publish uses
-# the NPM_TOKEN secret instead; delete the secret once trusted publishing is set up.
+# npm sign-in is trusted publishing (OIDC) only, with no npm token anywhere: the package names this
+# repo and release.yml as its trusted publisher on npmjs.com, with "npm publish" allowed. npm
+# attaches provenance. The very first version was published by hand, since a trusted publisher can
+# only be added to a package that exists.
 name: Release
 
 on:
@@ -44,22 +46,12 @@ jobs:
         run: pnpm run verify
       - name: Publish
         if: steps.version.outputs.publish == 'true'
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          if [ -n "$NPM_TOKEN" ]; then
-            # The first publish, before trusted publishing can be set up.
-            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > "$RUNNER_TEMP/npmrc"
-            export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc"
-            pnpm publish --no-git-checks --provenance
-          else
-            pnpm publish --no-git-checks
-          fi
+        run: pnpm publish --no-git-checks
       - name: Tag v${{ steps.version.outputs.version }}
-        if: steps.version.outputs.publish == 'true'
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
+          if [ -n "$(git ls-remote --tags origin "refs/tags/v$VERSION")" ]; then exit 0; fi
           git tag "v$VERSION"
           git push origin "v$VERSION"
-          echo "::notice title=Release::Published and tagged v$VERSION"
+          echo "::notice title=Release::Tagged v$VERSION"
