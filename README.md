@@ -15,17 +15,19 @@ Shared GitHub Actions, config presets and coding guidelines for my repos, extrac
 
 ## Guidelines
 
-- [Tooling overview](docs/guidelines/tooling.md)
-- [Package management](docs/guidelines/package-management.md)
-- [Linting and formatting](docs/guidelines/linting-and-formatting.md)
-- [Choosing Astro or Vite](docs/guidelines/astro-vs-vite.md)
-- [Types](docs/guidelines/types.md)
-- [Testing](docs/guidelines/testing.md)
-- [GitHub Actions](docs/guidelines/github-actions.md)
-- [Branch previews](docs/guidelines/previews.md)
-- [Commits and pull requests](docs/guidelines/git.md)
+- [Tooling overview](guidelines/tooling.md)
+- [Package management](guidelines/package-management.md)
+- [Linting and formatting](guidelines/linting-and-formatting.md)
+- [Choosing Astro or Vite](guidelines/astro-vs-vite.md)
+- [Types](guidelines/types.md)
+- [Testing](guidelines/testing.md)
+- [GitHub Actions](guidelines/github-actions.md)
+- [Branch previews](guidelines/previews.md)
+- [Commits and pull requests](guidelines/git.md)
 
 ## Composite actions
+
+In [`github/actions/`](github/actions). Each one is used as `Craga89/standards/github/actions/<action>@<sha>`.
 
 Pin each to a commit SHA, as you would any third-party action.
 
@@ -38,8 +40,8 @@ Pin each to a commit SHA, as you would any third-party action.
 
 ```yaml
 - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-- uses: Craga89/standards/setup-node@<sha> # v1.0.0
-- uses: Craga89/standards/setup-playwright@<sha> # v1.0.0
+- uses: Craga89/standards/github/actions/setup-node@<sha> # v1.0.0
+- uses: Craga89/standards/github/actions/setup-playwright@<sha> # v1.0.0
 ```
 
 ## Reusable workflows
@@ -60,7 +62,7 @@ jobs:
       build-artifact: build
 ```
 
-Branch previews need three small caller workflows; see [previews.md](docs/guidelines/previews.md)
+Branch previews need three small caller workflows; see [previews.md](guidelines/previews.md)
 and `templates/.github/workflows/preview*.yml`.
 
 Still to come (from the extraction plan): `playwright-suite`, `lighthouse`, `a11y-live` and

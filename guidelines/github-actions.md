@@ -17,5 +17,5 @@
 - **Explain the workflow at the top**: what it's for, what calls it, and a small diagram of the
   job graph when there is more than one job.
 - **Pass inputs through `env:`** into `run:` scripts, never `${{ }}` inside the script itself.
-- Share code by moving it here: composite actions at the repo root, reusable workflows in
+- Share code by moving it here: composite actions in `github/actions/`, reusable workflows in
   `.github/workflows/`. Triggers, schedules and the job graph stay in each repo.

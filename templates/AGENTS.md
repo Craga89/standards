@@ -9,4 +9,4 @@ This repo follows [Craga89/standards](https://github.com/Craga89/standards). The
 - **Types are checked by `tsc`**, JavaScript included (`checkJs`). Write ESM.
 - **Actions are pinned to commit SHAs.** Keep the `# vX.Y.Z` comment when you change one.
 - **Commits and PR titles** follow Conventional Commits: `type(scope): summary`. See
-  [git.md](https://github.com/Craga89/standards/blob/main/docs/guidelines/git.md).
+  [git.md](https://github.com/Craga89/standards/blob/main/guidelines/git.md).

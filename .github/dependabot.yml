@@ -13,14 +13,7 @@ updates:
   - package-ecosystem: github-actions
     directories:
       - /
-      - /setup-node
-      - /setup-playwright
-      - /publish-branch
-      - /report-meta
-      - /preview-name
-      - /preview-status
-      - /preview-comment
-      - /pages-store
+      - /github/actions/*
     schedule:
       interval: weekly
     groups:

@@ -51,7 +51,7 @@ A build or deploy failure sets the status to failure, linking to the run.
        - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
        - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
          with: { name: build, path: site }
-       - uses: Craga89/standards/pages-store@<sha> # v1.0.0
+       - uses: Craga89/standards/github/actions/pages-store@<sha> # v1.0.0
          with: { source: site }
    deploy:
      needs: publish
