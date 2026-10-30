@@ -80,12 +80,12 @@ jobs:
         if: steps.ready.outputs.ok == 'true'
         uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
       - if: steps.ready.outputs.ok == 'true'
-        uses: Craga89/standards/preview-status@2683e4116e18f128c46fce9261c4bd5d1284e8ff # v1
+        uses: Craga89/standards/github/actions/preview-status@51c0e1701e9fd455322797e03bc21347618f04b6 # v1
         with:
           published-dir: pages
       - name: Mark the preview failed
         if: failure() && github.event_name == 'workflow_run' && github.event.workflow_run.event == 'push'
-        uses: Craga89/standards/preview-status@2683e4116e18f128c46fce9261c4bd5d1284e8ff # v1
+        uses: Craga89/standards/github/actions/preview-status@51c0e1701e9fd455322797e03bc21347618f04b6 # v1
         with:
           state: failure
           sha: ${{ github.event.workflow_run.head_sha }}
