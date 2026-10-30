@@ -1,6 +1,6 @@
 {
   "name": "@craga89/standards",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Shared oxlint, oxfmt and tsconfig presets. Use it as a pnpm config dependency.",
   "keywords": [
     "config-dependency",

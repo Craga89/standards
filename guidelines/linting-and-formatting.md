@@ -39,14 +39,16 @@ Update it with `pnpm update @craga89/standards`.
 }
 ```
 
-| Preset       | Adds to `base`                                                                          |
-| ------------ | --------------------------------------------------------------------------------------- |
-| `base.json`  | The shared rules. Use it directly for Node tools and libraries                          |
-| `astro.json` | Ignores `site/` and `.astro/`; browser env in `src/`; node env in `tools/` and `tests/` |
-| `vite.json`  | Ignores `dist/`; browser env in `src/`; node env in `tools/`, `tests/` and configs      |
+| Preset       | Adds to `base`                                                    |
+| ------------ | ----------------------------------------------------------------- |
+| `base.json`  | The shared rules. Use it directly for Node tools and libraries    |
+| `astro.json` | Browser env in `src/`; node env in `tools/` and `tests/`          |
+| `vite.json`  | Browser env in `src/`; node env in `tools/`, `tests/` and configs |
 
 oxlint's `extends` takes file paths only, which is why the presets are read from `node_modules`.
-Overrides in the repo's own file are added to the preset's.
+Overrides in the repo's own file are added to the preset's, and rule options come through
+intact. `ignorePatterns` don't: oxlint applies only the repo's own, so list them there (build
+output such as `site/**` or `dist/**`; oxlint also skips whatever `.gitignore` lists).
 
 **`oxfmt.config.ts`** spreads the shared options, because oxfmt has no `extends`. oxfmt finds a
 `.ts` config on its own (not a `.mjs` one):
