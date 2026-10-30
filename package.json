@@ -1,7 +1,14 @@
 {
   "name": "@craga89/standards",
   "version": "1.0.0",
-  "description": "Shared GitHub Actions, oxlint/oxfmt/tsconfig presets and coding guidelines.",
+  "description": "Shared oxlint, oxfmt and tsconfig presets. Use it as a pnpm config dependency.",
+  "keywords": [
+    "config-dependency",
+    "oxfmt",
+    "oxlint",
+    "pnpm",
+    "tsconfig"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -17,19 +24,19 @@
     "./tsconfig/*": "./configs/tsconfig/*.json",
     "./package.json": "./package.json"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "lint": "oxlint --disable-nested-config",
-    "format": "oxfmt .",
-    "format:check": "oxfmt --check .",
+    "format": "oxfmt --disable-nested-config .",
+    "format:check": "oxfmt --disable-nested-config --check .",
     "test:unit": "node --test \"tests/**/*.test.mjs\"",
     "verify": "pnpm run lint && pnpm run format:check && pnpm run test:unit"
   },
   "devDependencies": {
     "oxfmt": "0.75.0",
     "oxlint": "1.90.0"
-  },
-  "engines": {
-    "node": ">=26"
   },
   "packageManager": "pnpm@12.15.0"
 }

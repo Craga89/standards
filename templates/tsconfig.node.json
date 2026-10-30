@@ -1,5 +1,5 @@
 {
-  "extends": "@craga89/standards/tsconfig/base",
+  "extends": "./node_modules/.pnpm-config/@craga89/standards/configs/tsconfig/base.json",
   "compilerOptions": {
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "types": ["node"]

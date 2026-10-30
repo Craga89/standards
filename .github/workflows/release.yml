@@ -1,0 +1,65 @@
+# Publishes @craga89/standards to npm when package.json has a version npm doesn't, then tags the
+# commit vX.Y.Z. A release is a version bump merged to main; every other push is a no-op.
+#
+# npm sign-in: trusted publishing (OIDC), once the package names this repo and release.yml as its
+# trusted publisher on npmjs.com, which needs the package to exist. The very first publish uses
+# the NPM_TOKEN secret instead; delete the secret once trusted publishing is set up.
+name: Release
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write # the vX.Y.Z tag
+      id-token: write # trusted publishing and provenance
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./github/actions/setup-node
+      - name: Is this version on npm yet?
+        id: version
+        run: |
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$(pnpm view "$name@$version" version 2>/dev/null)" = "$version" ]; then
+            echo "::notice title=Release::$name@$version is already on npm; nothing to publish"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.version.outputs.publish == 'true'
+        run: pnpm run verify
+      - name: Publish
+        if: steps.version.outputs.publish == 'true'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then
+            # The first publish, before trusted publishing can be set up.
+            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > "$RUNNER_TEMP/npmrc"
+            export NPM_CONFIG_USERCONFIG="$RUNNER_TEMP/npmrc"
+            pnpm publish --no-git-checks --provenance
+          else
+            pnpm publish --no-git-checks
+          fi
+      - name: Tag v${{ steps.version.outputs.version }}
+        if: steps.version.outputs.publish == 'true'
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git tag "v$VERSION"
+          git push origin "v$VERSION"
+          echo "::notice title=Release::Published and tagged v$VERSION"

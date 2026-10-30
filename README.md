@@ -70,18 +70,27 @@ Still to come (from the extraction plan): `playwright-suite`, `lighthouse`, `a11
 
 ## Adopting in a repo
 
+The config presets are published to npm as
+[`@craga89/standards`](https://www.npmjs.com/package/@craga89/standards). Add it as a pnpm
+config dependency, so repos read the shared files rather than copies
+([details](guidelines/linting-and-formatting.md#setup)):
+
 ```bash
-pnpm add -D -E oxlint oxfmt github:Craga89/standards#v1
+pnpm add -D -E oxlint oxfmt
+pnpm add --config -E @craga89/standards
 ```
 
 Then copy what applies from [`templates/`](templates): `.oxlintrc.json`, `oxfmt.config.ts`,
 `tsconfig.node.json`, `.editorconfig`, `pnpm-workspace.yaml`, `.github/dependabot.yml`,
 `.github/workflows/ci.yml`, and `AGENTS.md` + `CLAUDE.md` for coding agents.
 
-## Versioning
+## Versioning and releases
 
-Tags `vX.Y.Z` for each release, plus `v1` moved forward on every non-breaking one. Callers pin a
-SHA and let Dependabot bump it. A breaking change starts `v2`.
+`package.json`'s version is the release. Merging a version bump to `main` publishes it to npm and
+tags the commit `vX.Y.Z` ([`release.yml`](.github/workflows/release.yml)); other pushes publish
+nothing. Repos pin the actions and workflows by commit SHA (Dependabot bumps them) and the
+package by version and integrity (`pnpm update @craga89/standards`). A breaking change bumps the
+major version.
 
 ## License
 

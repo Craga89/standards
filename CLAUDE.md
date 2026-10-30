@@ -10,9 +10,12 @@ This repo is the source of truth for tooling and guidelines shared by `Craga89/p
    workflows**, used as `Craga89/standards/.github/workflows/<workflow>.yml@<sha>` (GitHub only
    loads them from `.github/workflows/`). Moving or renaming an action, renaming an input or
    removing a step is a breaking change.
-2. **Config presets** in `configs/`, installed as `github:Craga89/standards#v1` and read from
-   `node_modules/@craga89/standards/configs/...`. Don't move or rename them, and keep the
-   `exports` map in `package.json` in sync.
+2. **Config presets** in `configs/`, published to npm as `@craga89/standards` and installed as a
+   pnpm config dependency, so repos read them from
+   `node_modules/.pnpm-config/@craga89/standards/configs/...`. Moving or renaming one is a
+   breaking change; keep the `exports` map in `package.json` in sync. The package ships only
+   `configs/`, and a config dependency can't have dependencies or install scripts
+   (`tests/package.test.mjs` checks).
 3. **Guidelines** in `guidelines/`, linked from each repo's `AGENTS.md`.
 
 Rules for changes:
@@ -28,7 +31,8 @@ Rules for changes:
 - Pin every third-party action, and any tool a workflow downloads, to a commit SHA with a
   `# vX.Y.Z` comment (check it's that tag's: `git ls-remote <repo> 'refs/tags/vX.Y.Z^{}'`).
   Dependabot covers every action under `github/actions/*`.
-- Releases: tag `vX.Y.Z` and move `v1` to it. A breaking change starts `v2`.
+- Releases: bump `version` in `package.json` (semver; a breaking change bumps the major) and
+  merge. `release.yml` publishes it to npm and tags the commit `vX.Y.Z`. Don't tag by hand.
 - Before committing: `pnpm run verify`. CI also runs actionlint.
 - Commits follow `guidelines/git.md`. Scopes: `actions`, `workflows`, `configs`, `docs`,
   `deps`.
