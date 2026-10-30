@@ -1,8 +1,8 @@
 // Branch previews: every pushed branch is built into preview/<slug>/ on the Pages site, next to the
 // live site. These helpers name the folders, prune the ones whose branch is gone, and write the
 // preview/ index page. Used by the preview-name and pages-store actions.
-//   node lib/previews.mjs slug <branch>                        prints the folder name for a branch
-//   node lib/previews.mjs index <dir> <repo-url> [branches]   prunes <dir>/preview/, writes its index.html
+//   node github/actions/lib/previews.mjs slug <branch>                        prints the folder name for a branch
+//   node github/actions/lib/previews.mjs index <dir> <repo-url> [branches]   prunes <dir>/preview/, writes its index.html
 // [branches] is a file with one existing branch per line; previews of any other branch are removed.
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';

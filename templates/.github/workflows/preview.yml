@@ -1,5 +1,5 @@
 # A preview of every branch at <site>/preview/<slug>/, rebuilt on each push without waiting for the
-# checks. Deleting the branch removes it. See Craga89/standards docs/guidelines/previews.md.
+# checks. Deleting the branch removes it. See Craga89/standards guidelines/previews.md.
 name: Preview
 
 on:

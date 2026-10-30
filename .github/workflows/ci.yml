@@ -20,7 +20,7 @@ jobs:
       - name: Every action is pinned to a commit
         run: |
           # Local paths (./) aside, every uses: names a full commit SHA, Craga89/standards included.
-          if grep -rnE '^\s*(- )?uses:' .github/workflows ./*/action.yml templates | grep -vE 'uses: \./|@[0-9a-f]{40}( |$)|@<sha>'; then
+          if grep -rnE '^\s*(- )?uses:' .github/workflows ./github/actions/*/action.yml templates | grep -vE 'uses: \./|@[0-9a-f]{40}( |$)|@<sha>'; then
             echo "::error::Pin the actions above to a commit SHA (with a # vX.Y.Z comment)"; exit 1
           fi
       # Pinned to v1.7.12's commit, like the actions.
@@ -32,7 +32,7 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./setup-node
+      - uses: ./github/actions/setup-node
       - run: pnpm run lint
       - run: pnpm run format:check
 
@@ -42,5 +42,5 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: ./setup-node
+      - uses: ./github/actions/setup-node
       - run: pnpm run test:unit

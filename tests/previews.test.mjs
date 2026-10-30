@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
-import { readPreviews, renderIndex, slug, stale } from '../lib/previews.mjs';
+import { readPreviews, renderIndex, slug, stale } from '../github/actions/lib/previews.mjs';
 
 test('slug: readable, stable and unique per branch name', () => {
   assert.match(slug('feature/Foo_bar'), /^feature-foo-bar-[0-9a-f]{6}$/);

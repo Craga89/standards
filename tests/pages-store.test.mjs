@@ -7,9 +7,9 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { slug } from '../lib/previews.mjs';
+import { slug } from '../github/actions/lib/previews.mjs';
 
-const script = fileURLToPath(new URL('../pages-store/store.sh', import.meta.url));
+const script = fileURLToPath(new URL('../github/actions/pages-store/store.sh', import.meta.url));
 const tmp = mkdtempSync(join(tmpdir(), 'pages-store-'));
 const git = (/** @type {string} */ cwd, /** @type {string[]} */ ...args) =>
   execFileSync('git', args, { cwd, encoding: 'utf8', env: { ...process.env, GIT_CONFIG_NOSYSTEM: '1' } }).trim();
