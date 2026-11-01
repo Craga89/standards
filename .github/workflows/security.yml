@@ -15,6 +15,9 @@ concurrency:
 
 jobs:
   security:
+    # Other labels don't re-run it. Filtered here, not in the called workflow, so a skipped run
+    # can't replace a failed "security / Security review" check with a passing one.
+    if: github.event.action != 'labeled' || github.event.label.name == 'security-accepted'
     uses: ./.github/workflows/security-review.yml
     permissions:
       contents: read

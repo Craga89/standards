@@ -14,6 +14,9 @@
 #     cancel-in-progress: true
 #   jobs:
 #     security:
+#       # Other labels don't re-run it. This has to be here, not in the called workflow: a skipped
+#       # job there would replace a failed "security / Security review" check with a passing one.
+#       if: github.event.action != 'labeled' || github.event.label.name == 'security-accepted'
 #       uses: Craga89/standards/.github/workflows/security-review.yml@<sha> # v1.x.x
 #       permissions:
 #         contents: read
@@ -58,8 +61,7 @@ jobs:
     if: >-
       github.event_name == 'pull_request' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
-      github.event.pull_request.user.login != 'dependabot[bot]' &&
-      (github.event.action != 'labeled' || github.event.label.name == inputs.accept-label)
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -67,7 +69,7 @@ jobs:
       pull-requests: write # the review comments with the findings
     env:
       # Adding the accept label passes the check for the reviewed commit without reviewing it again.
-      ACCEPTING: ${{ github.event.action == 'labeled' }}
+      ACCEPTING: ${{ github.event.action == 'labeled' && github.event.label.name == inputs.accept-label }}
     steps:
       - name: Is there an API key?
         if: env.ACCEPTING != 'true'
