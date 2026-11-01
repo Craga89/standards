@@ -30,7 +30,9 @@ The author, person or agent, checks the change before anyone else reads it:
   [`security-review.yml`](../.github/workflows/security-review.yml), reviews every push and fails
   on any finding. A finding clears when a later push fixes it, or when you've answered it (a false
   positive, or a risk you accept) and add the `security-accepted` label. The answer goes in a reply
-  to the finding's comment, so the reason is on record.
+  to the finding's comment, so the reason is on record. Pull requests from forks and Dependabot
+  aren't reviewed (they get no secrets, and the action isn't hardened against prompt injection),
+  and a skipped check passes, so review those yourself.
 - **Every finding is answered**, from either reviewer: fixed, or a reply saying why not. The
   ruleset requires every conversation resolved before merging, which enforces it.
 
