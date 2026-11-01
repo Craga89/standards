@@ -1,0 +1,124 @@
+# Security review of a pull request's diff by Claude, with Anthropic's claude-code-security-review
+# action. Findings are posted as review comments on the lines they're about, and any finding fails
+# the job, so making the check required blocks the merge until the finding is fixed (every push is
+# reviewed again). A finding you've answered as a false positive or an accepted risk is cleared by
+# adding the accept-label (security-accepted) to the pull request, which passes the check without
+# another review; findings on later pushes are still reported, but don't fail it. See
+# guidelines/code-review.md.
+#
+#   on:
+#     pull_request:
+#       types: [opened, synchronize, reopened, labeled]
+#   concurrency:
+#     group: security-${{ github.event.pull_request.number }}
+#     cancel-in-progress: true
+#   jobs:
+#     security:
+#       uses: Craga89/standards/.github/workflows/security-review.yml@<sha> # v1.x.x
+#       permissions:
+#         contents: read
+#         pull-requests: write
+#       secrets:
+#         anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+#
+# The action isn't hardened against prompt injection, so it only reviews pull requests from this
+# repo's own branches: not forks (which get no secrets anyway) and not Dependabot (likewise).
+name: Security review
+
+on:
+  workflow_call:
+    inputs:
+      model:
+        description: The Claude model that reviews the diff
+        type: string
+        default: claude-opus-5-5
+      exclude-directories:
+        description: Comma-separated directories to leave out of the review
+        type: string
+        default: ''
+      instructions:
+        description: A file of extra instructions for this repo, appended to the review prompt (skipped if missing)
+        type: string
+        default: .github/security-review.md
+      accept-label:
+        description: The pull request label that accepts the findings, so they don't fail the check
+        type: string
+        default: security-accepted
+    secrets:
+      anthropic-api-key:
+        description: An Anthropic API key enabled for Claude Code
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  review:
+    name: Security review
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.user.login != 'dependabot[bot]' &&
+      (github.event.action != 'labeled' || github.event.label.name == inputs.accept-label)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      pull-requests: write # the review comments with the findings
+    env:
+      # Adding the accept label passes the check for the reviewed commit without reviewing it again.
+      ACCEPTING: ${{ github.event.action == 'labeled' }}
+    steps:
+      - name: Is there an API key?
+        if: env.ACCEPTING != 'true'
+        env:
+          KEY: ${{ secrets.anthropic-api-key }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error title=Security review::Add an ANTHROPIC_API_KEY secret to the repo (Settings → Secrets and variables → Actions) and pass it as anthropic-api-key"
+            exit 1
+          fi
+      - if: env.ACCEPTING != 'true'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 2
+          persist-credentials: false
+      - id: review
+        if: env.ACCEPTING != 'true'
+        # The action has no releases, so this is a commit on its main branch (2026-02-11).
+        uses: anthropics/claude-code-security-review@0c6a49f1fa56a1d472575da86a94dbc1edb78eda # main
+        with:
+          claude-api-key: ${{ secrets.anthropic-api-key }}
+          claude-model: ${{ inputs.model }}
+          comment-pr: 'true'
+          # Review every push, not just the first, so a fixed finding clears the check. Comments
+          # aren't repeated: the action skips commenting when its earlier comments are there.
+          run-every-commit: 'true'
+          exclude-directories: ${{ inputs.exclude-directories }}
+          # The review runs from the action's own directory, so the path is made absolute.
+          custom-security-scan-instructions: ${{ github.workspace }}/${{ inputs.instructions }}
+      - name: Block on findings
+        env:
+          FINDINGS: ${{ steps.review.outputs.findings-count }}
+          ACCEPTED: ${{ contains(github.event.pull_request.labels.*.name, inputs.accept-label) }}
+          LABEL: ${{ inputs.accept-label }}
+        run: |
+          if [ "$ACCEPTING" = "true" ]; then
+            echo "::notice title=Security review::Findings accepted with the $LABEL label"
+            exit 0
+          fi
+          # The action reports an error as no findings, so check that the review actually ran.
+          if [ ! -s claudecode-results.json ] || jq -e '.error' claudecode-results.json > /dev/null; then
+            echo "::error title=Security review::The review didn't complete; see the log above"
+            exit 1
+          fi
+          if [ "${FINDINGS:-0}" != "0" ]; then
+            if [ "$ACCEPTED" = "true" ]; then
+              echo "::warning title=Security review::$FINDINGS finding(s), accepted with the $LABEL label"
+              exit 0
+            fi
+            echo "::error title=Security review::$FINDINGS finding(s), commented on the pull request. Fix them, or answer each one and add the $LABEL label"
+            exit 1
+          fi
+          echo "No security findings" >> "$GITHUB_STEP_SUMMARY"

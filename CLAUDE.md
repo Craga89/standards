@@ -33,6 +33,8 @@ Rules for changes:
   Dependabot covers every action under `github/actions/*`.
 - Releases: bump `version` in `package.json` (semver; a breaking change bumps the major) and
   merge. `release.yml` publishes it to npm and tags the commit `vX.Y.Z`. Don't tag by hand.
-- Before committing: `pnpm run verify`. CI also runs actionlint.
+- Before committing: `pnpm run verify`. CI also runs actionlint. Before opening a PR, run
+  `/code-review` (and `/security-review` when a workflow's permissions, inputs or secrets change),
+  and fill in the PR template. Review against `REVIEW.md` ([code-review.md](guidelines/code-review.md)).
 - Commits follow `guidelines/git.md`. Scopes: `actions`, `workflows`, `configs`, `docs`,
   `deps`.

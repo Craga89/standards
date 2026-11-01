@@ -24,6 +24,7 @@ Shared GitHub Actions, config presets and coding guidelines for my repos, extrac
 - [GitHub Actions](guidelines/github-actions.md)
 - [Branch previews](guidelines/previews.md)
 - [Commits and pull requests](guidelines/git.md)
+- [Code review](guidelines/code-review.md)
 
 ## Composite actions
 
@@ -52,6 +53,7 @@ Pin each to a commit SHA, as you would any third-party action.
 | `preview.yml`         | Builds the branch for `/preview/<slug>/`, stores it, comments the link; removes it on delete    | `build-command`, `build-dir`, `base-env`, `playwright` |
 | `pages-deploy.yml`    | Publishes the `pages` branch to Pages, keeping the live site up, then marks previews live       | `store-branch`                                         |
 | `preview-comment.yml` | Comments the preview link when a PR is opened                                                   | `site-url`                                             |
+| `security-review.yml` | Claude's security review of a PR; fails on any finding until it's fixed or accepted             | `model`, `exclude-directories`, `instructions`         |
 
 ```yaml
 jobs:
@@ -82,7 +84,9 @@ pnpm add --config -E @craga89/standards
 
 Then copy what applies from [`templates/`](templates): `.oxlintrc.json`, `oxfmt.config.ts`,
 `tsconfig.node.json`, `.editorconfig`, `pnpm-workspace.yaml`, `.github/dependabot.yml`,
-`.github/workflows/ci.yml`, and `AGENTS.md` + `CLAUDE.md` for coding agents.
+`.github/workflows/ci.yml`, `AGENTS.md` + `CLAUDE.md` for coding agents, and for review
+`REVIEW.md`, `.github/pull_request_template.md`, `.github/copilot-instructions.md` and
+`.github/workflows/security.yml` ([code-review.md](guidelines/code-review.md#setup)).
 
 ## Versioning and releases
 
