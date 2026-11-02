@@ -92,7 +92,11 @@ Review that never runs out of things to say is noise. So:
    account, one workspace (or the workflow must also pass `workspace-id`) and scope
    `workspace:developer`. GitHub's subject puts each name's ID after it
    (`repo:Craga89@187963/standards@1436925586:pull_request`), so a prefix of `repo:Craga89/` never
-   matches; the IDs also survive a rename. The Console's authentication history shows each
+   matches; the IDs also survive a rename. Older repos still get the format without IDs
+   (`repo:Craga89/craigsworks:pull_request`), and a rule takes one subject pattern, so give them a
+   second rule with `subject_prefix: "repo:Craga89/*"` and the same claims (the
+   `repository_owner_id` claim keeps it to this account), and set that repo's
+   `ANTHROPIC_FEDERATION_RULE_ID` to it. The Console's authentication history shows each
    token's claims and why it was refused. Then in each repo add three repository variables
    (Settings → Secrets and variables → Actions → Variables): `ANTHROPIC_FEDERATION_RULE_ID`,
    `ANTHROPIC_ORGANIZATION_ID` and `ANTHROPIC_SERVICE_ACCOUNT_ID`. They're IDs, not secrets.
