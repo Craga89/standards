@@ -87,9 +87,12 @@ Review that never runs out of things to say is noise. So:
    [workload identity federation](https://platform.claude.com/docs/en/manage-claude/wif-providers/github-actions),
    so there's no API key to store. Once, in the Claude Console (Settings → Workload identity →
    Connect workload → GitHub Actions), create a federation rule for pull request runs, e.g.
-   `subject_prefix: "repo:Craga89/*"`, `audience: "https://api.anthropic.com"` and
-   `claims: {"repository_owner": "Craga89", "event_name": "pull_request"}`, with its service
-   account and scope `workspace:developer`. Then in each repo add three repository variables
+   `subject_prefix: "repo:Craga89@187963/*"`, `audience: "https://api.anthropic.com"` and
+   `claims: {"repository_owner_id": "187963", "event_name": "pull_request"}`, with its service
+   account and scope `workspace:developer`. GitHub's subject puts each name's ID after it
+   (`repo:Craga89@187963/standards@1436925586:pull_request`), so a prefix of `repo:Craga89/` never
+   matches; the IDs also survive a rename. The Console's authentication history shows each
+   token's claims and why it was refused. Then in each repo add three repository variables
    (Settings → Secrets and variables → Actions → Variables): `ANTHROPIC_FEDERATION_RULE_ID`,
    `ANTHROPIC_ORGANIZATION_ID` and `ANTHROPIC_SERVICE_ACCOUNT_ID`. They're IDs, not secrets.
    Each review costs a little; with a handful of pull requests a week it's a few dollars a month.
