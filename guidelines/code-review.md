@@ -89,7 +89,8 @@ Review that never runs out of things to say is noise. So:
    Connect workload → GitHub Actions), create a federation rule for pull request runs, e.g.
    `subject_prefix: "repo:Craga89@187963/*"`, `audience: "https://api.anthropic.com"` and
    `claims: {"repository_owner_id": "187963", "event_name": "pull_request"}`, with its service
-   account and scope `workspace:developer`. GitHub's subject puts each name's ID after it
+   account, one workspace (or the workflow must also pass `workspace-id`) and scope
+   `workspace:developer`. GitHub's subject puts each name's ID after it
    (`repo:Craga89@187963/standards@1436925586:pull_request`), so a prefix of `repo:Craga89/` never
    matches; the IDs also survive a rename. The Console's authentication history shows each
    token's claims and why it was refused. Then in each repo add three repository variables
