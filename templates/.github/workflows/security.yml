@@ -1,6 +1,7 @@
 # Security review of every pull request by Claude. Make "security / Security review" a required
 # check, so a finding blocks the merge until it's fixed or accepted (the security-accepted label).
-# Signs in with workload identity federation, its IDs in repository variables. Replace <sha> with
+# Signs in with workload identity federation: its IDs (not secrets) in repository variables, or
+# written in here. Replace <sha> with
 # the commit of the standards release you want; Dependabot bumps it. See Craga89/standards guidelines/code-review.md.
 name: Security
 
