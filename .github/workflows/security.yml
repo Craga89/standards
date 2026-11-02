@@ -23,9 +23,7 @@ jobs:
       contents: read
       pull-requests: write # the review comments with the findings
       id-token: write # signs in to the Claude API with workload identity federation
-    # Workload identity federation: IDs, not secrets. The rule (in the Claude Console) only matches
-    # pull_request runs from Craga89's own repos.
     with:
-      federation-rule-id: fdrl_019jqmbdrtHmi1MoDqk2Evyq
-      organization-id: a5f21d05-5a73-4abe-b82c-344b9990cfc9
-      service-account-id: svac_01Eotc68mGzp3tBPiMdLLuUZ
+      federation-rule-id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+      organization-id: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+      service-account-id: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
