@@ -1,10 +1,15 @@
-# Security review of a pull request's diff by Claude, with Anthropic's claude-code-security-review
-# action. Findings are posted as review comments on the lines they're about, and any finding fails
-# the job, so making the check required blocks the merge until the finding is fixed (every push is
-# reviewed again). A finding you've answered as a false positive or an accepted risk is cleared by
-# adding the accept-label (security-accepted) to the pull request, which passes the check without
-# another review; findings on later pushes are still reported, but don't fail it. See
+# Security review of a pull request's diff by Claude Code, with Anthropic's claude-code-action.
+# Findings are posted as review comments on the lines they're about, and any finding fails the job,
+# so making the check required blocks the merge until the finding is fixed (every push is reviewed
+# again). A finding you've answered as a false positive or an accepted risk is cleared by adding
+# the accept-label (security-accepted) to the pull request, which passes the check without another
+# review; findings on later pushes are still reported, but don't fail it. See
 # guidelines/code-review.md.
+#
+# It signs in to the Claude API with workload identity federation: GitHub's OIDC token for the run
+# is exchanged for a short-lived Anthropic token, so there's no API key to store. The federation
+# IDs aren't secrets; keep them in repository variables. An API key secret works instead, for a
+# repo without federation.
 #
 #   on:
 #     pull_request:
@@ -21,11 +26,14 @@
 #       permissions:
 #         contents: read
 #         pull-requests: write
-#       secrets:
-#         anthropic-api-key: ${{ secrets.ANTHROPIC_API_KEY }}
+#         id-token: write
+#       with:
+#         federation-rule-id: ${{ vars.ANTHROPIC_FEDERATION_RULE_ID }}
+#         organization-id: ${{ vars.ANTHROPIC_ORGANIZATION_ID }}
+#         service-account-id: ${{ vars.ANTHROPIC_SERVICE_ACCOUNT_ID }}
 #
-# The action isn't hardened against prompt injection, so it only reviews pull requests from this
-# repo's own branches: not forks (which get no secrets anyway) and not Dependabot (likewise).
+# It only reviews pull requests from this repo's own branches: not forks or Dependabot, which get
+# no OIDC token or secrets, and whose content shouldn't steer an agent anyway.
 name: Security review
 
 on:
@@ -40,16 +48,32 @@ on:
         type: string
         default: ''
       instructions:
-        description: A file of extra instructions for this repo, appended to the review prompt (skipped if missing)
+        description: A file of extra instructions for this repo (skipped if missing)
         type: string
         default: .github/security-review.md
       accept-label:
         description: The pull request label that accepts the findings, so they don't fail the check
         type: string
         default: security-accepted
+      federation-rule-id:
+        description: The workload identity federation rule (fdrl_...)
+        type: string
+        default: ''
+      organization-id:
+        description: The Anthropic organization's ID, for federation
+        type: string
+        default: ''
+      service-account-id:
+        description: The service account the federated token acts as (svac_...)
+        type: string
+        default: ''
+      workspace-id:
+        description: The workspace (wrkspc_...), when the federation rule covers more than one
+        type: string
+        default: ''
     secrets:
       anthropic-api-key:
-        description: An Anthropic API key enabled for Claude Code
+        description: An Anthropic API key, instead of federation
         required: false
 
 permissions:
@@ -67,42 +91,83 @@ jobs:
     permissions:
       contents: read
       pull-requests: write # the review comments with the findings
+      id-token: write # the OIDC token exchanged for a Claude API token
     env:
       # Adding the accept label passes the check for the reviewed commit without reviewing it again.
       ACCEPTING: ${{ github.event.action == 'labeled' && github.event.label.name == inputs.accept-label }}
     steps:
-      - name: Is there an API key?
+      - name: How does it sign in?
         if: env.ACCEPTING != 'true'
         env:
           KEY: ${{ secrets.anthropic-api-key }}
+          RULE: ${{ inputs.federation-rule-id }}
+          ORG: ${{ inputs.organization-id }}
         run: |
-          if [ -z "$KEY" ]; then
-            echo "::error title=Security review::Add an ANTHROPIC_API_KEY secret to the repo (Settings → Secrets and variables → Actions) and pass it as anthropic-api-key"
+          if [ -z "$KEY" ] && { [ -z "$RULE" ] || [ -z "$ORG" ]; }; then
+            echo "::error title=Security review::Set up workload identity federation and pass federation-rule-id, organization-id and service-account-id (or pass an anthropic-api-key secret). See guidelines/code-review.md#setup"
             exit 1
           fi
       - if: env.ACCEPTING != 'true'
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 2
           persist-credentials: false
+      - name: List earlier findings
+        if: env.ACCEPTING != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          # So a finding already commented on isn't commented again. Kept out of the checkout's
+          # tracked files; Claude only reads it.
+          gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/comments" \
+            --jq '.[] | select(.user.login == "github-actions[bot]") | {path, line, body}' \
+            > .security-review-earlier.jsonl
       - id: review
         if: env.ACCEPTING != 'true'
-        # The action has no releases, so this is a commit on its main branch (2026-02-11).
-        uses: anthropics/claude-code-security-review@0c6a49f1fa56a1d472575da86a94dbc1edb78eda # main
+        uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
         with:
-          claude-api-key: ${{ secrets.anthropic-api-key }}
-          claude-model: ${{ inputs.model }}
-          comment-pr: 'true'
-          # Review every push, not just the first, so a fixed finding clears the check. Comments
-          # aren't repeated: the action skips commenting when its earlier comments are there.
-          run-every-commit: 'true'
-          exclude-directories: ${{ inputs.exclude-directories }}
-          # The review runs from the action's own directory, so the path is made absolute.
-          custom-security-scan-instructions: ${{ github.workspace }}/${{ inputs.instructions }}
+          github_token: ${{ github.token }}
+          anthropic_api_key: ${{ secrets.anthropic-api-key }}
+          anthropic_federation_rule_id: ${{ inputs.federation-rule-id }}
+          anthropic_organization_id: ${{ inputs.organization-id }}
+          anthropic_service_account_id: ${{ inputs.service-account-id }}
+          anthropic_workspace_id: ${{ inputs.workspace-id }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+
+            Review this pull request's changes for security vulnerabilities. Get the diff with
+            `gh pr diff`, and read the surrounding code where you need it.
+
+            Report only issues this change introduces that an attacker could realistically
+            exploit, with a concrete path to it: injection (shell, SQL, HTML/XSS, template),
+            authentication or authorization bypass, secrets in code or logs, unsafe handling of
+            untrusted input, weakened security settings (Content-Security-Policy, CORS, cookies),
+            and in GitHub Actions: secrets reachable from pull request workflows, untrusted event
+            fields interpolated into run:, and permissions wider than the job needs. Don't report
+            denial of service, rate limiting, missing hardening with no exploit, style, or
+            anything that isn't in this diff.
+            ${{ inputs.exclude-directories != '' && format('Ignore files under: {0}.', inputs.exclude-directories) || '' }}
+
+            If `${{ inputs.instructions }}` exists, read it: it lists what matters most in this
+            repo, and it takes precedence over the list above.
+
+            `.security-review-earlier.jsonl` holds the findings already commented on this pull
+            request. For each new finding, post one inline comment on the line with
+            mcp__github_inline_comment__create_inline_comment: the vulnerability, how it's
+            exploited, and the fix. Don't comment again on a finding that's already there, but
+            still include it in your result if the code still has it.
+
+            Return every finding the code at this commit has, new or already commented, and none
+            that a later commit has fixed.
+          claude_args: >-
+            --model ${{ inputs.model }}
+            --allowedTools "mcp__github_inline_comment__create_inline_comment,Read,Grep,Glob,Bash(gh pr diff:*),Bash(gh pr view:*)"
+            --json-schema '{"type":"object","properties":{"findings":{"type":"array","items":{"type":"object","properties":{"file":{"type":"string"},"line":{"type":"integer"},"severity":{"type":"string","enum":["high","medium"]},"title":{"type":"string"}},"required":["file","severity","title"]}}},"required":["findings"]}'
       - name: Block on findings
         env:
-          FINDINGS: ${{ steps.review.outputs.findings-count }}
+          RESULT: ${{ steps.review.outputs.structured_output }}
           ACCEPTED: ${{ contains(github.event.pull_request.labels.*.name, inputs.accept-label) }}
           LABEL: ${{ inputs.accept-label }}
         run: |
@@ -110,12 +175,12 @@ jobs:
             echo "::notice title=Security review::Findings accepted with the $LABEL label"
             exit 0
           fi
-          # The action reports an error as no findings, so check that the review actually ran.
-          if [ ! -s claudecode-results.json ] || jq -e '.error' claudecode-results.json > /dev/null; then
-            echo "::error title=Security review::The review didn't complete; see the log above"
+          if ! FINDINGS="$(jq -e '.findings | length' <<< "$RESULT" 2> /dev/null)"; then
+            echo "::error title=Security review::The review didn't return a result; see the log above"
             exit 1
           fi
-          if [ "${FINDINGS:-0}" != "0" ]; then
+          jq -r '.findings[] | "- **\(.severity)** `\(.file):\(.line // "")` \(.title)"' <<< "$RESULT" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$FINDINGS" != "0" ]; then
             if [ "$ACCEPTED" = "true" ]; then
               echo "::warning title=Security review::$FINDINGS finding(s), accepted with the $LABEL label"
               exit 0

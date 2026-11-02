@@ -27,12 +27,13 @@ The author, person or agent, checks the change before anyone else reads it:
 - **Automated review**: Copilot code review on every push, following `.github/copilot-instructions.md`,
   which points at the repo's `REVIEW.md`. Claude follows the same file when asked to review.
 - **Security review** that blocks: `security.yml`, calling the shared
-  [`security-review.yml`](../.github/workflows/security-review.yml), reviews every push and fails
+  [`security-review.yml`](../.github/workflows/security-review.yml) (Claude Code, through
+  `anthropics/claude-code-action`), reviews every push and fails
   on any finding. A finding clears when a later push fixes it, or when you've answered it (a false
   positive, or a risk you accept) and add the `security-accepted` label. The answer goes in a reply
   to the finding's comment, so the reason is on record. Pull requests from forks and Dependabot
-  aren't reviewed (they get no secrets, and the action isn't hardened against prompt injection),
-  and a skipped check passes, so review those yourself.
+  aren't reviewed (they can't sign in, and their content shouldn't steer an agent), and a skipped
+  check passes, so review those yourself.
 - **Every finding is answered**, from either reviewer: fixed, or a reply saying why not. The
   ruleset requires every conversation resolved before merging, which enforces it.
 
@@ -80,11 +81,18 @@ Review that never runs out of things to say is noise. So:
 
 1. Copy from [`templates/`](../templates): `REVIEW.md` (then fill it in),
    `.github/pull_request_template.md`, `.github/copilot-instructions.md` and
-   `.github/workflows/security.yml`. Optionally add `.github/security-review.md`, extra
-   categories for the security review to check, in the
-   [action's format](https://github.com/anthropics/claude-code-security-review/blob/main/docs/custom-security-scan-instructions.md).
-2. Add an `ANTHROPIC_API_KEY` repository secret, from an API key enabled for Claude Code. Each
-   review costs a little; with a handful of pull requests a week it's a few dollars a month.
+   `.github/workflows/security.yml`. Optionally add `.github/security-review.md`: what matters
+   most for security in this repo, which the review reads first.
+2. Let the review sign in with
+   [workload identity federation](https://platform.claude.com/docs/en/manage-claude/wif-providers/github-actions),
+   so there's no API key to store. Once, in the Claude Console (Settings → Workload identity →
+   Connect workload → GitHub Actions), create a federation rule for pull request runs, e.g.
+   `subject_prefix: "repo:Craga89/*"`, `audience: "https://api.anthropic.com"` and
+   `claims: {"repository_owner": "Craga89", "event_name": "pull_request"}`, with its service
+   account and scope `workspace:developer`. Then in each repo add three repository variables
+   (Settings → Secrets and variables → Actions → Variables): `ANTHROPIC_FEDERATION_RULE_ID`,
+   `ANTHROPIC_ORGANIZATION_ID` and `ANTHROPIC_SERVICE_ACCOUNT_ID`. They're IDs, not secrets.
+   Each review costs a little; with a handful of pull requests a week it's a few dollars a month.
 3. Create the `security-accepted` label.
 4. In the branch ruleset: require **security / Security review** as a status check, require
    conversations to be resolved before merging, and turn on Copilot code review of new pushes.

@@ -53,7 +53,7 @@ Pin each to a commit SHA, as you would any third-party action.
 | `preview.yml`         | Builds the branch for `/preview/<slug>/`, stores it, comments the link; removes it on delete    | `build-command`, `build-dir`, `base-env`, `playwright` |
 | `pages-deploy.yml`    | Publishes the `pages` branch to Pages, keeping the live site up, then marks previews live       | `store-branch`                                         |
 | `preview-comment.yml` | Comments the preview link when a PR is opened                                                   | `site-url`                                             |
-| `security-review.yml` | Claude's security review of a PR; fails on any finding until it's fixed or accepted             | `model`, `exclude-directories`, `instructions`         |
+| `security-review.yml` | Claude's security review of a PR; fails on any finding until it's fixed or accepted             | `model`, `instructions`, federation IDs                |
 
 ```yaml
 jobs:
