@@ -125,6 +125,8 @@ jobs:
             > .security-review-earlier.jsonl
       - id: review
         if: env.ACCEPTING != 'true'
+        # The next step reports a failure here, with a clearer reason than the action gives.
+        continue-on-error: true
         uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
         with:
           github_token: ${{ github.token }}
@@ -168,6 +170,8 @@ jobs:
       - name: Block on findings
         env:
           RESULT: ${{ steps.review.outputs.structured_output }}
+          OUTCOME: ${{ steps.review.outcome }}
+          EXECUTION: ${{ steps.review.outputs.execution_file }}
           ACCEPTED: ${{ contains(github.event.pull_request.labels.*.name, inputs.accept-label) }}
           LABEL: ${{ inputs.accept-label }}
         run: |
@@ -176,7 +180,15 @@ jobs:
             exit 0
           fi
           if ! FINDINGS="$(jq -e '.findings | length' <<< "$RESULT" 2> /dev/null)"; then
-            echo "::error title=Security review::The review didn't return a result; see the log above"
+            # A run that errors before its first model call costs nothing: Claude Code couldn't
+            # start, almost always because the Claude API refused the sign-in. The action then
+            # only says there was no structured output, which hides that.
+            cost="$(jq -r '[.[] | select(.type? == "result")] | last | .total_cost_usd // empty' "$EXECUTION" 2> /dev/null || true)"
+            if [ "$OUTCOME" = "failure" ] && [ "$cost" = "0" ]; then
+              echo "::error title=Security review::Claude didn't start, most likely because the Claude API refused the sign-in. The Claude Console's workload identity authentication history has the reason (match_subject_prefix, workspace_id_required, ...)"
+            else
+              echo "::error title=Security review::The review didn't return a result; see the log above"
+            fi
             exit 1
           fi
           jq -r '.findings[] | "- **\(.severity)** `\(.file):\(.line // "")` \(.title)"' <<< "$RESULT" >> "$GITHUB_STEP_SUMMARY"
