@@ -25,6 +25,7 @@ Shared GitHub Actions, config presets and coding guidelines for my repos, extrac
 - [Branch previews](guidelines/previews.md)
 - [Commits and pull requests](guidelines/git.md)
 - [Code review](guidelines/code-review.md)
+- [Hosting](guidelines/hosting.md) (proposed: Cloudflare Workers static assets)
 
 ## Composite actions
 
