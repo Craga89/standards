@@ -1,0 +1,6 @@
+# Response headers for the site on Cloudflare (Workers static assets), copied into the build at
+# deploy. Previews also get X-Robots-Tag: noindex (cloudflare-preview.yml adds it).
+
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

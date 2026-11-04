@@ -1,7 +1,8 @@
 # Hosting
 
-**Status:** proposed, piloting on `Craga89/portfolio` (November 2026). GitHub Pages remains the
-standard until the pilot is done; this page then becomes the standard, or records why not.
+**Status:** adopted (November 2026). `Craga89/portfolio` (craigthompson.dev) moved first;
+`Craga89/craigsworks` follows. The GitHub Pages flow ([previews.md](previews.md)) stays for repos
+that haven't moved.
 
 ## Decision
 
@@ -34,23 +35,67 @@ Speed is similar: both are large CDNs.
   a repository secret (`CLOUDFLARE_API_TOKEN`, with `CLOUDFLARE_ACCOUNT_ID`).
 - **The domain's DNS on Cloudflare.** A Worker's custom domain needs the zone in the same account.
 - **Free plan limits:** 20,000 files per deployment (25 MiB each), 100 Workers per account.
-- **Rework here:** the preview workflows (`preview.yml`, `pages-deploy.yml`, `pages-store`,
-  `preview-name`, `preview-status`) give way to a smaller pair built on `wrangler`. That's a major
-  version, with the GitHub Pages flow kept until every site has moved.
+- **Two flows here for a while:** `cloudflare-preview.yml` and `cloudflare-deploy` replace the
+  GitHub Pages ones (`preview.yml`, `pages-deploy.yml`, `pages-store`, `preview-name`,
+  `preview-status`), which stay until every site has moved, then go in a major version.
 
 Leaving stays cheap: the build output is plain static files that any host can serve.
 
-## Pilot
+## Setting a site up
 
-`Craga89/portfolio` deploys the same build to Cloudflare alongside GitHub Pages
-(`.github/workflows/cloudflare.yml`, `cloudflare/wrangler.jsonc`, `cloudflare/_headers`): `main`
-to the Worker's `workers.dev` address, other branches to Previews. craigthompson.dev stays on
-GitHub Pages meanwhile. To finish:
+1. **The Worker's config**, e.g. `cloudflare/wrangler.jsonc` ([template](../templates/cloudflare/wrangler.jsonc)):
+   an assets-only Worker named after the repository, `assets.directory` pointing at the build,
+   `html_handling` and `not_found_handling` to match the build (Astro: `auto-trailing-slash` and
+   `404-page`), and a `previews` block (it can be empty). Keep it out of the repository root if
+   anything else there runs wrangler. Add `wrangler` as an exact dev dependency.
+2. **Headers** in `cloudflare/_headers` ([template](../templates/cloudflare/_headers)), copied into
+   the build at deploy. The Preview workflow adds `X-Robots-Tag: noindex` for Previews, inside the
+   `/*` rule: a request gets the headers of every pattern it matches, but a second rule with the
+   same pattern replaces the first.
+3. **Secrets:** `CLOUDFLARE_API_TOKEN` (an account API token with **Workers Scripts: Edit** on the
+   one account) and `CLOUDFLARE_ACCOUNT_ID`. Wrangler has no OIDC sign-in. The token can deploy
+   every Worker on the account, so only `wrangler` steps get it (step `env:`): never a job that
+   builds or tests a branch, whose dependencies could read it. The shared workflow builds and
+   checks in jobs without it.
+4. **Previews:** `.github/workflows/preview.yml`
+   ([template](../templates/.github/workflows/preview.yml)) calling
+   [`cloudflare-preview.yml`](../.github/workflows/cloudflare-preview.yml). Every branch gets
+   `https://<slug>-<worker>.<subdomain>.workers.dev/`, a **Preview** commit status and one pull
+   request comment; deleting the branch deletes it. The build gets `PREVIEW_BRANCH` (show a preview
+   bar, skip analytics and service workers) and `ALLOW_INDEXING=false`. The token only reaches `wrangler`, which runs from the default branch's checkout (its lockfile and Worker config) with the branch's built files, so a change to the Worker config shows in Previews once it's merged, and the pull request that sets a site up gets no Preview of its own (the workflow says so).
+5. **The live site:** in the CI job that runs once every check passes on the default branch,
+   [`cloudflare-deploy`](../github/actions/cloudflare-deploy/action.yml) after `setup-node`, then a
+   check that the address serves the site. The site is served at the Worker's `workers.dev`
+   address until the domain moves.
 
-1. Compare a few weeks of pilot deploys and Previews with GitHub Pages: reliability, deploy time,
-   anything that breaks without a base path.
-2. Move the CSP from `<meta>` to a header, and give hashed assets a long cache life (after giving
-   unhashed files under `/assets/`, such as `ask-index.json`, hashed names or their own rule).
-3. Cut craigthompson.dev over (the Worker's custom domain; drop the pilot's `noindex`), then
-   retire its `pages` branch and GitHub Pages.
-4. Extract the workflow into reusable ones here, and move `Craga89/craigsworks`.
+## Moving the domain
+
+Done once per site, through the Cloudflare API or dashboard, with the domain's DNS on Cloudflare:
+
+1. **Record the DNS records** that point at the old host (GitHub Pages: four `A` records to
+   `185.199.108–111.153`, four `AAAA`, a `www` CNAME to `<owner>.github.io`). They're the rollback.
+2. **Delete them and attach the domain** to the Worker (Workers → the Worker → Domains, or
+   `PUT /accounts/{id}/workers/domains`). Cloudflare won't attach a hostname that has records, so
+   the site is down for the seconds in between; Cloudflare then manages the record and certificate.
+3. **Redirect `www`:** a proxied `AAAA` record for `www` to `100::`, and a redirect rule
+   (`http.host eq "www.<domain>"` to `concat("https://<domain>", http.request.uri.path)`, 301,
+   keeping the query string).
+4. **Straight away, list the domain in the config** (`"routes": [{ "pattern": "<domain>",
+   "custom_domain": true }]`, and `"workers_dev": false`) and deploy. Each deploy replaces the
+   Worker's routes with the config's, so without it the next deploy detaches the domain; with it,
+   deploys leave the domain as it is, and the token needs no Workers Routes permission.
+5. **Retire the old host:** remove its deploy and preview workflows and `CNAME`, turn GitHub Pages
+   off and delete the `pages` branch.
+
+## How it went on craigthompson.dev
+
+- The pilot ran alongside GitHub Pages (`main` to `workers.dev`, Previews per branch), with a
+  self-check after each deploy (`tools/cloudflare-check.sh`: pages, redirects, 404s, robots and
+  `noindex`, `live.json`, no preview bar). Use the same pattern.
+- The switch took about three seconds of downtime.
+- Things to know: Previews served from `/` don't trip base-path code, but anything keyed off a base
+  path (a preview bar) needs `PREVIEW_BRANCH` instead; an API that checks origins (ask.sh) has to
+  allow the Worker's addresses; a step piping `wrangler` into `tee` needs `shell: bash` (pipefail);
+  `"workers_dev": false` also turned the Worker's Preview addresses off until `"preview_urls": true`
+  was set; and the first version of the Preview workflow gave the token to the build, which the
+  security review caught.
