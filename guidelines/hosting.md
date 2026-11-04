@@ -60,7 +60,7 @@ Leaving stays cheap: the build output is plain static files that any host can se
    [`cloudflare-preview.yml`](../.github/workflows/cloudflare-preview.yml). Every branch gets
    `https://<slug>-<worker>.<subdomain>.workers.dev/`, a **Preview** commit status and one pull
    request comment; deleting the branch deletes it. The build gets `PREVIEW_BRANCH` (show a preview
-   bar, skip analytics and service workers) and `ALLOW_INDEXING=false`.
+   bar, skip analytics and service workers) and `ALLOW_INDEXING=false`. The token only reaches `wrangler`, which runs from the default branch's checkout (its lockfile and Worker config) with the branch's built files, so a change to the Worker config shows in Previews once it's merged.
 5. **The live site:** in the CI job that runs once every check passes on the default branch,
    [`cloudflare-deploy`](../github/actions/cloudflare-deploy/action.yml) after `setup-node`, then a
    check that the address serves the site. The site is served at the Worker's `workers.dev`

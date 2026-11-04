@@ -35,7 +35,8 @@
 # The build gets PREVIEW_BRANCH (the branch) and ALLOW_INDEXING=false, and the Preview also sends
 # X-Robots-Tag: noindex. The Worker's config needs a "previews" block (it can be empty) and
 # "preview_urls": true (turning workers_dev off otherwise turns Preview addresses off too). The
-# Cloudflare token only reaches wrangler, never the branch's build or check.
+# Cloudflare token only reaches wrangler, run from the default branch's checkout, never the
+# branch's code (its build, its check, its dependencies or its Wrangler config).
 name: Cloudflare preview
 
 on:
@@ -164,9 +165,11 @@ jobs:
           if-no-files-found: error
           retention-days: 3
 
-  # Uploads the build as the branch's Preview, or deletes the Preview of a deleted branch. The token
-  # is only given to wrangler; the only other code that runs is pnpm install of the locked
-  # dependencies (whose install scripts run only if pnpm-workspace.yaml allows them).
+  # Uploads the build as the branch's Preview, or deletes the Preview of a deleted branch. Nothing
+  # from the branch runs here: the checkout is the default branch (reviewed, merged code), so
+  # wrangler, its version and the Worker's config are the default branch's, and only the branch's
+  # built files come in, from the build job. A change to the Worker's config reaches Previews once
+  # it's merged. The token is only given to wrangler.
   deploy:
     name: Cloudflare preview
     needs: [name, build]
@@ -197,6 +200,7 @@ jobs:
           fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
       - uses: Craga89/standards/github/actions/setup-node@51c0e1701e9fd455322797e03bc21347618f04b6 # v1
       - if: github.event_name == 'delete'
