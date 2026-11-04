@@ -157,6 +157,8 @@ jobs:
           # The live site's headers, plus noindex for every page: a Preview stays out of search
           # engines. It goes inside the /* rule when there is one: a second /* rule would replace
           # the first rather than add to it.
+          # The $0 is awk's, not the shell's.
+          # shellcheck disable=SC2016
           noindex='{ print } $0 == "/*" && !done { print "  X-Robots-Tag: noindex"; done = 1 }
             END { if (!done) printf "\n/*\n  X-Robots-Tag: noindex\n" }'
           if [ -n "$HEADERS" ]; then awk "$noindex" "$HEADERS"; else awk "$noindex" /dev/null; fi > "$BUILD_DIR/_headers"
