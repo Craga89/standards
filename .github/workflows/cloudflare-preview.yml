@@ -31,6 +31,9 @@
 #       secrets:
 #         cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 #         cloudflare-account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+#         # Previews behind Cloudflare Access: a service token the check can sign in with.
+#         access-client-id: ${{ secrets.CLOUDFLARE_ACCESS_CLIENT_ID }}
+#         access-client-secret: ${{ secrets.CLOUDFLARE_ACCESS_CLIENT_SECRET }}
 #
 # The build gets PREVIEW_BRANCH (the branch) and ALLOW_INDEXING=false, and the Preview also sends
 # X-Robots-Tag: noindex. The Worker's config needs a "previews" block (it can be empty) and
@@ -80,6 +83,12 @@ on:
         required: false
       cloudflare-account-id:
         description: The Cloudflare account's ID
+        required: false
+      access-client-id:
+        description: A Cloudflare Access service token's client ID, when Previews are behind Access (the check sends it)
+        required: false
+      access-client-secret:
+        description: That service token's client secret
         required: false
     outputs:
       url:
@@ -264,11 +273,45 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      # Previews behind Cloudflare Access redirect to a sign-in page. The check gets the Access
+      # service token as CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET, to send as headers of the
+      # same names. It only lets CI view Previews, so the branch's check may have it (unlike the
+      # Cloudflare API token).
+      - if: inputs.check-command != ''
+        name: Can the check reach the Preview?
+        env:
+          PREVIEW_URL: ${{ needs.deploy.outputs.url }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.access-client-id }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.access-client-secret }}
+        run: |
+          headers=()
+          if [ -n "$CF_ACCESS_CLIENT_ID" ]; then
+            headers=(-H "CF-Access-Client-Id: $CF_ACCESS_CLIENT_ID" -H "CF-Access-Client-Secret: $CF_ACCESS_CLIENT_SECRET")
+          fi
+          # A new Preview can take a few seconds to answer everywhere.
+          for _ in 1 2 3 4 5 6; do
+            where="$(curl -sS -o /dev/null -w '%{redirect_url}' "${headers[@]}" "$PREVIEW_URL/" || true)"
+            case "$where" in *cloudflareaccess.com*) break ;; esac
+            curl -fsS -o /dev/null "${headers[@]}" "$PREVIEW_URL/" && exit 0
+            sleep 5
+          done
+          case "$where" in
+            *cloudflareaccess.com*)
+              if [ -z "$CF_ACCESS_CLIENT_ID" ]; then
+                echo "::error title=Preview::Previews are behind Cloudflare Access: pass the access-client-id and access-client-secret secrets (a service token the Previews' Access policy allows)"
+              else
+                echo "::error title=Preview::Cloudflare Access turned the service token away: add it to the Previews' Access policy as a Service Auth rule"
+              fi
+              exit 1
+              ;;
+          esac
       - if: inputs.check-command != ''
         name: Check it serves the site
         env:
           CHECK: ${{ inputs.check-command }}
           PREVIEW_URL: ${{ needs.deploy.outputs.url }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.access-client-id }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.access-client-secret }}
         run: bash -c "$CHECK"
 
   # The commit's "Preview" status: green, linking to the Preview, only once it's up and checked;
