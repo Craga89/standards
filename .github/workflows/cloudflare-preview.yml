@@ -208,6 +208,19 @@ jobs:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
       - uses: Craga89/standards/github/actions/setup-node@51c0e1701e9fd455322797e03bc21347618f04b6 # v1
+      # wrangler and the Worker's config come from the default branch, so the pull request that adds
+      # them can't preview itself: say so, rather than "wrangler not found".
+      - name: Does the default branch have wrangler and the Worker's config?
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          missing=""
+          [ -f "$CONFIG" ] || missing="$CONFIG"
+          pnpm exec wrangler --version > /dev/null 2>&1 || missing="${missing:+$missing and }wrangler (a dev dependency)"
+          if [ -n "$missing" ]; then
+            echo "::error title=Preview::$DEFAULT_BRANCH has no $missing yet. Previews run wrangler and its config from $DEFAULT_BRANCH, never from the pushed branch, so they start once the change that adds them is merged."
+            exit 1
+          fi
       - if: github.event_name == 'delete'
         name: Delete the Preview
         env:
