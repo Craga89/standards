@@ -23,7 +23,7 @@ a Cloudflare account.
 | Caching          | 10 minutes for every file                                                                                            | Per path: a year for hashed assets                                                                                     |
 | Deploys          | Atomic, rollback by redeploying an old commit                                                                        | Atomic versions, rollback in seconds (`wrangler rollback`), gradual rollouts                                           |
 | APIs             | Elsewhere, cross-origin                                                                                              | The same Worker can serve `/api/*` next to the site                                                                    |
-| Preview privacy  | Public                                                                                                               | Public, or behind Cloudflare Access                                                                                    |
+| Preview privacy  | Public                                                                                                               | Behind Cloudflare Access (free): only you, and CI with a service token                                                 |
 | Cost             | Free for public repos                                                                                                | Free: requests for static assets are free and unlimited                                                                |
 
 Speed is similar: both are large CDNs.
@@ -63,7 +63,21 @@ Leaving stays cheap: the build output is plain static files that any host can se
    `https://<slug>-<worker>.<subdomain>.workers.dev/`, a **Preview** commit status and one pull
    request comment; deleting the branch deletes it. The build gets `PREVIEW_BRANCH` (show a preview
    bar, skip analytics and service workers) and `ALLOW_INDEXING=false`. The token only reaches `wrangler`, which runs from the default branch's checkout (its lockfile and Worker config) with the branch's built files, so a change to the Worker config shows in Previews once it's merged, and the pull request that sets a site up gets no Preview of its own (the workflow says so).
-5. **The live site:** in the CI job that runs once every check passes on the default branch,
+5. **Previews behind Cloudflare Access:** Previews are private, the live site public. Access is set
+   once per account, not per site, and is free for up to 50 users (Zero Trust's free plan):
+   1. Turn on Zero Trust (a team name and the free plan), then in **Workers & Pages**, protect
+      **all Worker previews** in the account (not production). That attaches one reusable policy,
+      "Cloudflare Workers Preview URLs", to every Worker's Previews, new Workers included. Allow
+      your email address (sign-in is a one-time code by email).
+   2. For CI: a **service token** (Zero Trust → Access → Service credentials), and a second rule on
+      that policy, **Service Auth**, that includes it. Each repository gets it as
+      `CLOUDFLARE_ACCESS_CLIENT_ID` and `CLOUDFLARE_ACCESS_CLIENT_SECRET`, passed to the Preview
+      workflow as `access-client-id` and `access-client-secret`. The check command gets them as
+      `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` and sends them as the
+      `CF-Access-Client-Id` and `CF-Access-Client-Secret` headers. The token can view every Worker's Previews on the account, so like the API token it
+      never reaches a branch's code: the check runs from the default branch's checkout.
+      Without the token, the Preview workflow fails with a message saying so.
+6. **The live site:** in the CI job that runs once every check passes on the default branch,
    [`cloudflare-deploy`](../github/actions/cloudflare-deploy/action.yml) after `setup-node`, then a
    check that the address serves the site. The site is served at the Worker's `workers.dev`
    address until the domain moves.

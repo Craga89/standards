@@ -45,3 +45,7 @@ jobs:
     secrets:
       cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       cloudflare-account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # Previews are behind Cloudflare Access (guidelines/hosting.md): the check signs in with this
+      # service token.
+      access-client-id: ${{ secrets.CLOUDFLARE_ACCESS_CLIENT_ID }}
+      access-client-secret: ${{ secrets.CLOUDFLARE_ACCESS_CLIENT_SECRET }}
