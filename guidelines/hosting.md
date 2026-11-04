@@ -49,7 +49,9 @@ Leaving stays cheap: the build output is plain static files that any host can se
    `404-page`), and a `previews` block (it can be empty). Keep it out of the repository root if
    anything else there runs wrangler. Add `wrangler` as an exact dev dependency.
 2. **Headers** in `cloudflare/_headers` ([template](../templates/cloudflare/_headers)), copied into
-   the build at deploy. The Preview workflow adds `X-Robots-Tag: noindex` for Previews.
+   the build at deploy. The Preview workflow adds `X-Robots-Tag: noindex` for Previews, inside the
+   `/*` rule: a request gets the headers of every pattern it matches, but a second rule with the
+   same pattern replaces the first.
 3. **Secrets:** `CLOUDFLARE_API_TOKEN` (an account API token with **Workers Scripts: Edit** on the
    one account) and `CLOUDFLARE_ACCOUNT_ID`. Wrangler has no OIDC sign-in. The token can deploy
    every Worker on the account, so only `wrangler` steps get it (step `env:`): never a job that
