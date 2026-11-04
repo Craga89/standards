@@ -5,8 +5,8 @@ This repo is the source of truth for tooling and guidelines shared by `Craga89/p
 `configs/`), and other repos consume it in three ways, so a change here can break them:
 
 1. **Composite actions** in `github/actions/` (`setup-node`, `setup-playwright`, `publish-branch`,
-   `report-meta`, and for branch previews `preview-name`, `pages-store`, `preview-status`,
-   `preview-comment`), used as `Craga89/standards/github/actions/<action>@<sha>`, and **reusable
+   `report-meta`, `cloudflare-deploy` for hosting on Cloudflare, and for GitHub Pages branch previews
+   `preview-name`, `pages-store`, `preview-status`, `preview-comment`), used as `Craga89/standards/github/actions/<action>@<sha>`, and **reusable
    workflows**, used as `Craga89/standards/.github/workflows/<workflow>.yml@<sha>` (GitHub only
    loads them from `.github/workflows/`). Moving or renaming an action, renaming an input or
    removing a step is a breaking change.

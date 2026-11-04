@@ -12,6 +12,7 @@ Shared GitHub Actions, config presets and coding guidelines for my repos, extrac
 | Types            | `tsc` strict, JavaScript included (`checkJs`)            |
 | Tests            | `node --test`, Playwright, axe (WCAG 2.2 AA), Lighthouse |
 | CI               | GitHub Actions, SHA-pinned, Dependabot weekly            |
+| Hosting          | Cloudflare Workers static assets, a Preview per branch   |
 
 ## Guidelines
 
@@ -22,10 +23,10 @@ Shared GitHub Actions, config presets and coding guidelines for my repos, extrac
 - [Types](guidelines/types.md)
 - [Testing](guidelines/testing.md)
 - [GitHub Actions](guidelines/github-actions.md)
-- [Branch previews](guidelines/previews.md)
+- [Branch previews on GitHub Pages](guidelines/previews.md) (superseded by Cloudflare Previews)
 - [Commits and pull requests](guidelines/git.md)
 - [Code review](guidelines/code-review.md)
-- [Hosting](guidelines/hosting.md) (proposed: Cloudflare Workers static assets)
+- [Hosting](guidelines/hosting.md): Cloudflare Workers static assets, and moving a domain
 
 ## Composite actions
 
@@ -33,12 +34,13 @@ In [`github/actions/`](github/actions). Each one is used as `Craga89/standards/g
 
 Pin each to a commit SHA, as you would any third-party action.
 
-| Action             | Does                                                                                                               | Inputs                         |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------ |
-| `setup-node`       | pnpm from `packageManager`, Node from `.node-version` with the pnpm store cached, `pnpm install --frozen-lockfile` | `working-directory`, `install` |
-| `setup-playwright` | Chromium for the installed Playwright version, cached, with its system libraries. Run after `setup-node`           | none                           |
-| `publish-branch`   | Replaces a branch's contents with a directory, as one commit with no history (report branches)                     | `branch`, `source`, `message`  |
-| `report-meta`      | Writes `commit.txt`, `run.txt` and `at.txt` into a report directory                                                | `dir`, `sha`                   |
+| Action              | Does                                                                                                                              | Inputs                                  |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `setup-node`        | pnpm from `packageManager`, Node from `.node-version` with the pnpm store cached, `pnpm install --frozen-lockfile`                | `working-directory`, `install`          |
+| `setup-playwright`  | Chromium for the installed Playwright version, cached, with its system libraries. Run after `setup-node`                          | none                                    |
+| `publish-branch`    | Replaces a branch's contents with a directory, as one commit with no history (report branches)                                    | `branch`, `source`, `message`           |
+| `report-meta`       | Writes `commit.txt`, `run.txt` and `at.txt` into a report directory                                                               | `dir`, `sha`                            |
+| `cloudflare-deploy` | Deploys a built site to its Cloudflare Worker (copies `_headers`, `wrangler deploy`), outputs its address. Run after `setup-node` | `config`, `build-dir`, `headers`, `url` |
 
 ```yaml
 - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -48,13 +50,14 @@ Pin each to a commit SHA, as you would any third-party action.
 
 ## Reusable workflows
 
-| Workflow              | Does                                                                                            | Inputs                                                 |
-| --------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
-| `quality.yml`         | `lint` + `format:check`, then `typecheck` + `test:unit` (optionally against a downloaded build) | `build-artifact`, `build-path`                         |
-| `preview.yml`         | Builds the branch for `/preview/<slug>/`, stores it, comments the link; removes it on delete    | `build-command`, `build-dir`, `base-env`, `playwright` |
-| `pages-deploy.yml`    | Publishes the `pages` branch to Pages, keeping the live site up, then marks previews live       | `store-branch`                                         |
-| `preview-comment.yml` | Comments the preview link when a PR is opened                                                   | `site-url`                                             |
-| `security-review.yml` | Claude's security review of a PR; fails on any finding until it's fixed or accepted             | `model`, `instructions`, federation IDs                |
+| Workflow                 | Does                                                                                                                               | Inputs                                                                                                          |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `quality.yml`            | `lint` + `format:check`, then `typecheck` + `test:unit` (optionally against a downloaded build)                                    | `build-artifact`, `build-path`                                                                                  |
+| `cloudflare-preview.yml` | A Cloudflare Worker Preview per branch: builds, `wrangler preview`, **Preview** status, one PR comment; deletes it with the branch | `worker`, `workers-subdomain`, `config`, `build-command`, `build-dir`, `headers`, `playwright`, `check-command` |
+| `preview.yml`            | GitHub Pages (superseded): builds the branch for `/preview/<slug>/`, stores it, comments the link                                  | `build-command`, `build-dir`, `base-env`, `playwright`                                                          |
+| `pages-deploy.yml`       | GitHub Pages (superseded): publishes the `pages` branch, then marks previews live                                                  | `store-branch`                                                                                                  |
+| `preview-comment.yml`    | GitHub Pages (superseded): comments the preview link when a PR is opened                                                           | `site-url`                                                                                                      |
+| `security-review.yml`    | Claude's security review of a PR; fails on any finding until it's fixed or accepted                                                | `model`, `instructions`, federation IDs                                                                         |
 
 ```yaml
 jobs:
@@ -65,8 +68,10 @@ jobs:
       build-artifact: build
 ```
 
-Branch previews need three small caller workflows; see [previews.md](guidelines/previews.md)
-and `templates/.github/workflows/preview*.yml`.
+Sites are hosted on Cloudflare: a Worker config and headers (`templates/cloudflare/`), one caller
+workflow for Previews (`templates/.github/workflows/preview.yml`) and `cloudflare-deploy` in CI; see
+[hosting.md](guidelines/hosting.md). The GitHub Pages flow ([previews.md](guidelines/previews.md))
+stays until every site has moved.
 
 Still to come (from the extraction plan): `playwright-suite`, `lighthouse`, `a11y-live` and
 `link-check`.

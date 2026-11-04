@@ -1,0 +1,46 @@
+name: Deploy to Cloudflare
+description: >-
+  Deploys a built site to its Cloudflare Worker (Workers static assets): copies the _headers file
+  into the build, runs wrangler deploy with the Worker's config, and outputs the address it's served
+  at. Run it after setup-node (wrangler is a dev dependency) on a build that passed the checks, with
+  CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in the environment. See guidelines/hosting.md.
+inputs:
+  config:
+    description: The Worker's Wrangler config file
+    default: wrangler.jsonc
+  build-dir:
+    description: The built site (the config's assets.directory)
+    default: site
+  headers:
+    description: The _headers file to copy into the build (blank = none)
+    default: ''
+  url:
+    description: The site's address, when it's a custom domain (wrangler prints only workers.dev addresses in full)
+    default: ''
+outputs:
+  url:
+    description: Where the site is served (the workers.dev address, else the url input)
+    value: ${{ steps.deploy.outputs.url }}
+runs:
+  using: composite
+  steps:
+    - id: deploy
+      shell: bash
+      env:
+        CONFIG: ${{ inputs.config }}
+        BUILD_DIR: ${{ inputs.build-dir }}
+        HEADERS: ${{ inputs.headers }}
+        URL: ${{ inputs.url }}
+      run: |
+        set -euo pipefail
+        if [ -z "${CLOUDFLARE_API_TOKEN:-}" ] || [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+          echo "::error title=Deploy to Cloudflare::Set CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID"
+          exit 1
+        fi
+        if [ -n "$HEADERS" ]; then cp "$HEADERS" "$BUILD_DIR/_headers"; fi
+        out="$(mktemp)"
+        pnpm exec wrangler deploy --config "$CONFIG" | tee "$out"
+        url="$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' "$out" | head -1 || true)"
+        url="${url:-$URL}"
+        echo "url=$url" >> "$GITHUB_OUTPUT"
+        if [ -n "$url" ]; then echo "Deployed: $url" >> "$GITHUB_STEP_SUMMARY"; fi

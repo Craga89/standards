@@ -1,0 +1,23 @@
+// The site on Cloudflare Workers static assets: a Worker with no code serving the build. Deployed by
+// CI (cloudflare-deploy) once every check passes, and previewed per branch (preview.yml). In its own
+// folder so wrangler run from the repository root for anything else doesn't pick it up; paths are
+// relative to this file. See Craga89/standards guidelines/hosting.md.
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  // Named after the repository.
+  "name": "<repository name>",
+  "compatibility_date": "2026-10-13",
+  // Until the domain moves: the site at <name>.<subdomain>.workers.dev. After it, replace with
+  // "routes": [{ "pattern": "<domain>", "custom_domain": true }] and "workers_dev": false, since
+  // each deploy replaces the Worker's routes with the config's.
+  "workers_dev": true,
+  // Worker Previews, one per branch. Empty: Previews use the same settings.
+  "previews": {},
+  "assets": {
+    "directory": "../site",
+    // Astro writes every page as <path>/index.html; /path redirects to /path/.
+    "html_handling": "auto-trailing-slash",
+    // Unknown paths get site/404.html with a 404.
+    "not_found_handling": "404-page",
+  },
+}

@@ -1,4 +1,8 @@
-# Branch previews
+# Branch previews on GitHub Pages
+
+> **Superseded** by Cloudflare Worker Previews ([hosting.md](hosting.md)): sites on Cloudflare get
+> a Preview of their own per branch from `cloudflare-preview.yml`. This flow stays for sites still
+> on GitHub Pages, until they move.
 
 Every pushed branch is built and served at `<site>/preview/<slug>/` on GitHub Pages, next to the
 live site, before the checks run. The commit gets a **Preview** status linking to it, and the pull
@@ -34,7 +38,7 @@ A build or deploy failure sets the status to failure, linking to the run.
 
 ## Adopting
 
-1. Copy `templates/.github/workflows/preview*.yml` and set the build inputs if the defaults
+1. Copy the GitHub Pages preview workflows from an earlier version of `templates/` (`git show v1.0.1:templates/.github/workflows/preview.yml`) and set the build inputs if the defaults
    (`pnpm run build`, output in `site/`, base path in `SITE_BASE`) don't fit.
 2. Make the build read its base path from `SITE_BASE` (Astro: `base: process.env.SITE_BASE || '/'`).
 3. In the CI job that publishes the live site, store it with `pages-store` (`target: ''`) and then

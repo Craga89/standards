@@ -1,13 +1,17 @@
-# A preview of every branch at <site>/preview/<slug>/, rebuilt on each push without waiting for the
-# checks. Deleting the branch removes it. See Craga89/standards guidelines/previews.md.
+# A Cloudflare Preview of every branch: built without waiting for the checks, served at
+# https://<slug>-<worker>.<subdomain>.workers.dev/, linked from the commit's "Preview" status and
+# one pull request comment, and deleted with the branch. Replace <sha> with the commit of the
+# standards release you want; Dependabot bumps it. See Craga89/standards guidelines/hosting.md.
 name: Preview
 
 on:
   push:
     branches-ignore:
-      - pages # what Pages serves (written by the workflows)
-      - 'dependabot/**' # Dependabot's token can't write the pages branch
+      - main # the live site, deployed by CI once every check passes
+      - 'dependabot/**' # Dependabot's runs get no secrets
       # Add any report branches (accessibility, lighthouse, ...) here.
+  pull_request:
+    types: [opened, reopened] # comments the link on a branch pushed before its pull request
   delete:
   workflow_dispatch:
 
@@ -15,21 +19,29 @@ permissions:
   contents: read
 
 concurrency:
-  # Per branch, so a newer push (or deleting the branch) replaces a run that hasn't finished.
-  group: preview-${{ github.event_name == 'delete' && github.event.ref || github.ref_name }}
-  cancel-in-progress: true
+  # Per branch, so a newer push (or deleting the branch) replaces a run that hasn't finished. Pull
+  # request events only comment, so they get a group of their own and never cancel a build.
+  group: preview-${{ github.event_name == 'pull_request' && 'pr-' || '' }}${{ github.event_name == 'delete' && github.event.ref || github.head_ref || github.ref_name }}
+  cancel-in-progress: ${{ github.event_name != 'pull_request' }}
 
 jobs:
   preview:
-    # Deleting a tag has no preview to remove.
+    # Deleting a tag has no Preview to remove.
     if: github.event_name != 'delete' || github.event.ref_type == 'branch'
-    uses: Craga89/standards/.github/workflows/preview.yml@<sha> # v1.0.0
+    uses: Craga89/standards/.github/workflows/cloudflare-preview.yml@<sha> # v1.0.0
     permissions:
-      contents: write # the pages branch
-      pages: read # where Pages serves the site
+      contents: read
       statuses: write # the "Preview" status on the commit
       pull-requests: write # the comment with the link
-    # with:
-    #   build-command: pnpm run build
-    #   base-env: SITE_BASE
-    #   playwright: false
+    with:
+      worker: <repository name> # the "name" in cloudflare/wrangler.jsonc
+      workers-subdomain: craga89
+      config: cloudflare/wrangler.jsonc
+      headers: cloudflare/_headers
+      # build-command: pnpm run build
+      # build-dir: site
+      # playwright: false
+      # check-command: tools/cloudflare-check.sh "$PREVIEW_URL" preview
+    secrets:
+      cloudflare-api-token: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      cloudflare-account-id: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
