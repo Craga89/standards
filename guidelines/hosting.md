@@ -51,7 +51,10 @@ Leaving stays cheap: the build output is plain static files that any host can se
 2. **Headers** in `cloudflare/_headers` ([template](../templates/cloudflare/_headers)), copied into
    the build at deploy. The Preview workflow adds `X-Robots-Tag: noindex` for Previews.
 3. **Secrets:** `CLOUDFLARE_API_TOKEN` (an account API token with **Workers Scripts: Edit** on the
-   one account) and `CLOUDFLARE_ACCOUNT_ID`. Wrangler has no OIDC sign-in.
+   one account) and `CLOUDFLARE_ACCOUNT_ID`. Wrangler has no OIDC sign-in. The token can deploy
+   every Worker on the account, so only `wrangler` steps get it (step `env:`): never a job that
+   builds or tests a branch, whose dependencies could read it. The shared workflow builds and
+   checks in jobs without it.
 4. **Previews:** `.github/workflows/preview.yml`
    ([template](../templates/.github/workflows/preview.yml)) calling
    [`cloudflare-preview.yml`](../.github/workflows/cloudflare-preview.yml). Every branch gets
@@ -90,4 +93,7 @@ Done once per site, through the Cloudflare API or dashboard, with the domain's D
 - The switch took about three seconds of downtime.
 - Things to know: Previews served from `/` don't trip base-path code, but anything keyed off a base
   path (a preview bar) needs `PREVIEW_BRANCH` instead; an API that checks origins (ask.sh) has to
-  allow the Worker's addresses; a step piping `wrangler` into `tee` needs `shell: bash` (pipefail).
+  allow the Worker's addresses; a step piping `wrangler` into `tee` needs `shell: bash` (pipefail);
+  `"workers_dev": false` also turned the Worker's Preview addresses off until `"preview_urls": true`
+  was set; and the first version of the Preview workflow gave the token to the build, which the
+  security review caught.

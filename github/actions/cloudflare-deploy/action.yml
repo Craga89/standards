@@ -3,7 +3,8 @@ description: >-
   Deploys a built site to its Cloudflare Worker (Workers static assets): copies the _headers file
   into the build, runs wrangler deploy with the Worker's config, and outputs the address it's served
   at. Run it after setup-node (wrangler is a dev dependency) on a build that passed the checks, with
-  CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID in the environment. See guidelines/hosting.md.
+  CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID set on this step only (env:), never on the job or
+  a step that runs the site's own code. See guidelines/hosting.md.
 inputs:
   config:
     description: The Worker's Wrangler config file

@@ -11,7 +11,9 @@
   // "routes": [{ "pattern": "<domain>", "custom_domain": true }] and "workers_dev": false, since
   // each deploy replaces the Worker's routes with the config's.
   "workers_dev": true,
-  // Worker Previews, one per branch. Empty: Previews use the same settings.
+  // Worker Previews, one per branch, at <preview>-<name>.<subdomain>.workers.dev. Explicit, since
+  // turning workers_dev off otherwise turns them off too. Empty block: same settings as production.
+  "preview_urls": true,
   "previews": {},
   "assets": {
     "directory": "../site",
