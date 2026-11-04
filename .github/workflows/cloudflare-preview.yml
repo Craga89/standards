@@ -39,7 +39,8 @@
 # X-Robots-Tag: noindex. The Worker's config needs a "previews" block (it can be empty) and
 # "preview_urls": true (turning workers_dev off otherwise turns Preview addresses off too). The
 # Cloudflare token only reaches wrangler, run from the default branch's checkout, never the
-# branch's code (its build, its check, its dependencies or its Wrangler config).
+# branch's code (its build, its check, its dependencies or its Wrangler config). An Access service
+# token likewise only reaches the check, which also runs from the default branch's checkout.
 name: Cloudflare preview
 
 on:
@@ -74,7 +75,7 @@ on:
         type: boolean
         default: false
       check-command:
-        description: A command that checks the Preview serves the site, given its address in $PREVIEW_URL (blank = none)
+        description: A command that checks the Preview serves the site, given its address in $PREVIEW_URL (blank = none). It runs from the default branch's checkout
         type: string
         default: ''
     secrets:
@@ -269,14 +270,18 @@ jobs:
     permissions:
       contents: read
     steps:
+      # The check runs from the default branch's checkout, not the pushed branch's: behind
+      # Cloudflare Access it gets the Access service token, which can view every Worker's Previews
+      # on the account, so no branch's code may read it. A change to the check reaches Previews
+      # once it's merged.
       - if: inputs.check-command != ''
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
-      # Previews behind Cloudflare Access redirect to a sign-in page. The check gets the Access
-      # service token as CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET, to send as headers of the
-      # same names. It only lets CI view Previews, so the branch's check may have it (unlike the
-      # Cloudflare API token).
+      # Previews behind Cloudflare Access redirect to a sign-in page. The check gets the service
+      # token as CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET, to send as headers of the same
+      # names.
       - if: inputs.check-command != ''
         name: Can the check reach the Preview?
         env:

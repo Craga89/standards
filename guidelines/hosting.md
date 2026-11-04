@@ -74,7 +74,8 @@ Leaving stays cheap: the build output is plain static files that any host can se
       `CLOUDFLARE_ACCESS_CLIENT_ID` and `CLOUDFLARE_ACCESS_CLIENT_SECRET`, passed to the Preview
       workflow as `access-client-id` and `access-client-secret`. The check command gets them as
       `CF_ACCESS_CLIENT_ID` and `CF_ACCESS_CLIENT_SECRET` and sends them as headers of the same
-      names. The token only lets CI view Previews, so the branch's own check may have it.
+      names. The token can view every Worker's Previews on the account, so like the API token it
+      never reaches a branch's code: the check runs from the default branch's checkout.
       Without the token, the Preview workflow fails with a message saying so.
 6. **The live site:** in the CI job that runs once every check passes on the default branch,
    [`cloudflare-deploy`](../github/actions/cloudflare-deploy/action.yml) after `setup-node`, then a
