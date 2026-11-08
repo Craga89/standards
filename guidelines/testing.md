@@ -5,6 +5,7 @@
 | Unit          | `node --test`                    | `tests/unit/**/*.test.mjs` | Every change, against the build                |
 | End-to-end    | Playwright                       | `tests/e2e`                | Every change, desktop and mobile               |
 | Accessibility | axe via Playwright (WCAG 2.2 AA) | `tests/a11y`               | Every change, sharded; live site on a schedule |
+| Components    | axe and screenshots per story    | `tests/{a11y,visual}`      | Every change ([component-catalogue.md][cc])    |
 | Performance   | Lighthouse                       | CI workflow                | After each deploy                              |
 | Links         | lychee                           | CI workflow                | On a schedule                                  |
 
@@ -14,3 +15,5 @@
   the base path it will be served from (`SITE_BASE`).
 - Reports (accessibility, Lighthouse) are published to their own branches with `publish-branch`
   and `report-meta`, so a site can show its latest results.
+
+[cc]: component-catalogue.md
