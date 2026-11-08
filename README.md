@@ -22,6 +22,8 @@ Shared GitHub Actions, config presets and coding guidelines for my repos, extrac
 - [Choosing Astro or Vite](guidelines/astro-vs-vite.md)
 - [Types](guidelines/types.md)
 - [Testing](guidelines/testing.md)
+- [Component catalogues](guidelines/component-catalogue.md): Astrobook or Storybook, a story per
+  component, and testing each one on its own
 - [GitHub Actions](guidelines/github-actions.md)
 - [Branch previews on GitHub Pages](guidelines/previews.md) (superseded by Cloudflare Previews)
 - [Commits and pull requests](guidelines/git.md)
