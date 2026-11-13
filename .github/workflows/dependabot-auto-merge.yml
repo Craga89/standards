@@ -1,0 +1,119 @@
+# Turns on auto-merge for a Dependabot pull request that only bumps patch or minor versions, so it
+# merges by itself once every required check passes, with no one involved. A major update, an
+# update whose version Dependabot can't compare (a SHA with no version comment), or one a required
+# check fails, waits for a person. A grouped pull request counts as its biggest update.
+#
+# It's only as safe as the checks the default branch requires: auto-merge waits for those and
+# nothing else, so it does nothing on a branch that requires none. Keep a Dependabot cooldown too, so a release has had a week to be pulled before it
+# can merge.
+#
+# It merges as a GitHub App, not with the workflow's GITHUB_TOKEN: a merge made with that token
+# doesn't start the workflows that run on a push to the default branch (deploys, screenshot
+# baselines). The App needs Contents and Pull requests (read and write) on the repo. Workflows that
+# Dependabot starts only see Dependabot secrets, so the App's client ID and key go there (Settings →
+# Secrets and variables → Dependabot), not in the Actions secrets.
+#
+#   on: pull_request
+#   permissions:
+#     contents: read
+#   jobs:
+#     auto-merge:
+#       # The author, not the actor: a person re-running the job doesn't change who wrote the PR.
+#       if: github.event.pull_request.user.login == 'dependabot[bot]'
+#       uses: Craga89/standards/.github/workflows/dependabot-auto-merge.yml@<sha> # v1.x.x
+#       permissions:
+#         contents: read
+#         pull-requests: read
+#       secrets:
+#         app-client-id: ${{ secrets.MERGE_APP_CLIENT_ID }}
+#         app-private-key: ${{ secrets.MERGE_APP_PRIVATE_KEY }}
+name: Dependabot auto-merge
+
+on:
+  workflow_call:
+    inputs:
+      update-types:
+        description: The update types that merge by themselves, comma-separated (patch, minor, major)
+        type: string
+        default: patch,minor
+      merge-method:
+        description: How the pull request merges (squash, merge or rebase)
+        type: string
+        default: squash
+    secrets:
+      app-client-id:
+        description: The GitHub App's client ID (a Dependabot secret)
+        required: true
+      app-private-key:
+        description: The GitHub App's private key (a Dependabot secret)
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  auto-merge:
+    name: Auto-merge
+    # Dependabot's own pull requests in this repo only; never a fork's.
+    if: >-
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read # fetch-metadata reads the pull request's commits
+    steps:
+      - name: Read what Dependabot is updating
+        id: meta
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
+
+      # Without required checks, auto-merge would merge straight away, before CI has run.
+      - name: Check the branch requires checks
+        id: checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          required=$(gh api "repos/${REPO}/rules/branches/${BASE}" --jq '[.[] | select(.type == "required_status_checks")] | length')
+          echo "required=$([ "${required:-0}" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+
+      - name: Decide
+        id: decide
+        env:
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          ALLOWED: ${{ inputs.update-types }}
+          DEPENDENCIES: ${{ steps.meta.outputs.dependency-names }}
+          REQUIRED: ${{ steps.checks.outputs.required }}
+          BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          kind="${UPDATE_TYPE#version-update:semver-}"
+          if [ "$REQUIRED" != true ]; then
+            echo "merge=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::${BASE} requires no status checks, so this pull request isn't auto-merged. Add required checks to its ruleset."
+          elif [ -n "$UPDATE_TYPE" ] && [[ ",${ALLOWED// /}," == *",$kind,"* ]]; then
+            echo "merge=true" >> "$GITHUB_OUTPUT"
+            echo "Auto-merging a ${kind} update: ${DEPENDENCIES}" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "merge=false" >> "$GITHUB_OUTPUT"
+            echo "Left for review: a ${kind:-version-unknown} update (${DEPENDENCIES}). Auto-merges ${ALLOWED}." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Sign in as the App
+        if: steps.decide.outputs.merge == 'true'
+        id: app
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ secrets.app-client-id }}
+          private-key: ${{ secrets.app-private-key }}
+          permission-contents: write
+          permission-pull-requests: write
+
+      - name: Turn on auto-merge
+        if: steps.decide.outputs.merge == 'true'
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          PR: ${{ github.event.pull_request.html_url }}
+          METHOD: ${{ inputs.merge-method }}
+        run: gh pr merge --auto "--${METHOD}" "$PR"

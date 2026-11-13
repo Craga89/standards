@@ -1,0 +1,22 @@
+# Merges Dependabot's patch and minor updates by themselves once every required check passes, so
+# only majors and failures need a person. Signs in as a GitHub App (Contents and Pull requests,
+# read and write), its client ID and key in Dependabot secrets. Replace <sha> with the commit of the
+# standards release you want; Dependabot bumps it. See Craga89/standards guidelines/package-management.md.
+name: Dependabot
+
+on: pull_request
+
+permissions:
+  contents: read
+
+jobs:
+  auto-merge:
+    # The pull request's author, not whoever started the run.
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    uses: Craga89/standards/.github/workflows/dependabot-auto-merge.yml@<sha> # v1.2.0
+    permissions:
+      contents: read
+      pull-requests: read # reads which dependencies the pull request updates
+    secrets:
+      app-client-id: ${{ secrets.MERGE_APP_CLIENT_ID }}
+      app-private-key: ${{ secrets.MERGE_APP_PRIVATE_KEY }}
