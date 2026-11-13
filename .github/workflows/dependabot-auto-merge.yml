@@ -4,12 +4,13 @@
 # check fails, waits for a person. A grouped pull request counts as its biggest update.
 #
 # It's only as safe as the checks the default branch requires: auto-merge waits for those and
-# nothing else, so it does nothing on a branch that requires none. Keep a Dependabot cooldown too, so a release has had a week to be pulled before it
-# can merge.
+# nothing else, so it does nothing on a branch that requires none. Keep a Dependabot cooldown too,
+# so a release has had a week to be pulled before it can merge.
 #
 # It merges as a GitHub App, not with the workflow's GITHUB_TOKEN: a merge made with that token
 # doesn't start the workflows that run on a push to the default branch (deploys, screenshot
-# baselines). The App needs Contents and Pull requests (read and write) on the repo. Workflows that
+# baselines). The App needs Contents, Pull requests and Workflows (read and write) on the repo:
+# Workflows because merging the actions group's updates changes workflow files. Workflows that
 # Dependabot starts only see Dependabot secrets, so the App's client ID and key go there (Settings →
 # Secrets and variables → Dependabot), not in the Actions secrets.
 #
@@ -109,6 +110,7 @@ jobs:
           private-key: ${{ secrets.app-private-key }}
           permission-contents: write
           permission-pull-requests: write
+          permission-workflows: write # the actions group's pull requests change workflow files
 
       - name: Turn on auto-merge
         if: steps.decide.outputs.merge == 'true'

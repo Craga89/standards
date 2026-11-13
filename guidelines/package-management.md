@@ -29,8 +29,9 @@ that fails a check, waits for a person. A grouped pull request counts as its big
   tests, the build). The workflow does nothing on a branch that requires none.
 - **It merges as a GitHub App.** A merge made with the workflow's `GITHUB_TOKEN` doesn't start the
   workflows that run on a push to the default branch, so nothing would deploy. Create one App for
-  your account with **Contents** and **Pull requests** (read and write), install it on the repos,
-  and add its client ID and a private key as the **Dependabot** secrets `MERGE_APP_CLIENT_ID` and
+  your account with **Contents**, **Pull requests** and **Workflows** (read and write; Workflows
+  because the actions group's updates change workflow files), install it on the repos, and add its
+  client ID and a private key as the **Dependabot** secrets `MERGE_APP_CLIENT_ID` and
   `MERGE_APP_PRIVATE_KEY`: workflows Dependabot starts can't see Actions secrets.
 - **Hold a dependency back** with an `ignore` rule in `.github/dependabot.yml`, with a comment
   saying why and when to remove it.
