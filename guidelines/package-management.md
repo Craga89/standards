@@ -22,7 +22,8 @@ Patch and minor updates merge by themselves: `.github/workflows/dependabot.yml`
 ([template](../templates/.github/workflows/dependabot.yml)) calls the shared
 [`dependabot-auto-merge.yml`](../.github/workflows/dependabot-auto-merge.yml), which turns on
 auto-merge, so the pull request merges once every required check passes. A major update, or one
-that fails a check, waits for a person. A grouped pull request counts as its biggest update.
+that fails a check, waits for a person. A grouped pull request merges only when every update in it
+is patch or minor, so one major, or one whose version can't be compared, holds the whole group.
 
 - **Required checks are the gate.** Auto-merge waits for the checks the default branch's ruleset
   requires and nothing else, so require the ones that matter (lint, types, unit and end-to-end

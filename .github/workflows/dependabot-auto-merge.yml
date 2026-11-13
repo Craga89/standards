@@ -1,7 +1,8 @@
 # Turns on auto-merge for a Dependabot pull request that only bumps patch or minor versions, so it
 # merges by itself once every required check passes, with no one involved. A major update, an
 # update whose version Dependabot can't compare (a SHA with no version comment), or one a required
-# check fails, waits for a person. A grouped pull request counts as its biggest update.
+# check fails, waits for a person. A grouped pull request merges only when every update in it is
+# patch or minor, so one major or unknown update holds the whole group.
 #
 # It's only as safe as the checks the default branch requires: auto-merge waits for those and
 # nothing else, so it does nothing on a branch that requires none. Keep a Dependabot cooldown too,
@@ -80,25 +81,29 @@ jobs:
           required=$(gh api "repos/${REPO}/rules/branches/${BASE}" --jq '[.[] | select(.type == "required_status_checks")] | length')
           echo "required=$([ "${required:-0}" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
 
+      # Every update in the pull request must be an allowed type, judged one by one: the aggregate
+      # update-type skips any it can't classify, so a group with one would pass as its biggest
+      # known update.
       - name: Decide
         id: decide
         env:
-          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+          UPDATES: ${{ steps.meta.outputs.updated-dependencies-json }}
           ALLOWED: ${{ inputs.update-types }}
-          DEPENDENCIES: ${{ steps.meta.outputs.dependency-names }}
           REQUIRED: ${{ steps.checks.outputs.required }}
           BASE: ${{ github.event.pull_request.base.ref }}
         run: |
-          kind="${UPDATE_TYPE#version-update:semver-}"
+          list=$(jq -r '.[] | "- \(.dependencyName): \((.updateType // "unknown") | sub("version-update:semver-"; ""))"' <<< "$UPDATES")
+          allowed=$(jq -cn --arg a "$ALLOWED" '$a | gsub(" "; "") | split(",") | map("version-update:semver-" + .)')
+          ok=$(jq --argjson allowed "$allowed" 'length > 0 and all(.[]; .updateType as $t | $allowed | index($t) != null)' <<< "$UPDATES")
           if [ "$REQUIRED" != true ]; then
             echo "merge=false" >> "$GITHUB_OUTPUT"
             echo "::warning::${BASE} requires no status checks, so this pull request isn't auto-merged. Add required checks to its ruleset."
-          elif [ -n "$UPDATE_TYPE" ] && [[ ",${ALLOWED// /}," == *",$kind,"* ]]; then
+          elif [ "$ok" = true ]; then
             echo "merge=true" >> "$GITHUB_OUTPUT"
-            echo "Auto-merging a ${kind} update: ${DEPENDENCIES}" >> "$GITHUB_STEP_SUMMARY"
+            printf 'Auto-merging (allowed: %s):\n%s\n' "$ALLOWED" "$list" >> "$GITHUB_STEP_SUMMARY"
           else
             echo "merge=false" >> "$GITHUB_OUTPUT"
-            echo "Left for review: a ${kind:-version-unknown} update (${DEPENDENCIES}). Auto-merges ${ALLOWED}." >> "$GITHUB_STEP_SUMMARY"
+            printf 'Left for review (auto-merges only %s):\n%s\n' "$ALLOWED" "$list" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Sign in as the App
