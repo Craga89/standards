@@ -127,7 +127,7 @@ jobs:
         if: env.ACCEPTING != 'true'
         # The next step reports a failure here, with a clearer reason than the action gives.
         continue-on-error: true
-        uses: anthropics/claude-code-action@f3b070c88125d33dbae5653df5f143101d4ea9dc # v1.0.276
+        uses: anthropics/claude-code-action@acfe7992852970efb4fee683d63d628e3e52df67 # v1.0.286
         with:
           github_token: ${{ github.token }}
           anthropic_api_key: ${{ secrets.anthropic-api-key }}
